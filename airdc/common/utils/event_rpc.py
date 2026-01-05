@@ -21,7 +21,10 @@ class ThreadEventRpcArgs(BaseModel):
     rsp_event: Event = Field(default_factory=Event)
 
 
-EventRpcArgs = Union[ProcessEventRpcArgs, ThreadEventRpcArgs]
+AsyncEventRpc = ThreadEventRpcArgs
+
+
+EventRpcArgs = Union[ProcessEventRpcArgs, ThreadEventRpcArgs, AsyncEventRpc]
 
 
 class EventRpcServer:

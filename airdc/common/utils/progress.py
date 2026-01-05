@@ -15,6 +15,48 @@ import asyncio
 SpawnEvent = get_context("spawn").Event
 
 
+def run_event_loop(group=None, name=None, daemon=True) -> asyncio.AbstractEventLoop:
+    if current_thread() != main_thread():
+        raise RuntimeError("Event loop must be run in the main thread")
+    event_loop = asyncio.get_event_loop()
+    if not event_loop.is_running():
+        event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(event_loop)
+        Thread(group, event_loop.run_forever, name, daemon=daemon).start()
+    return event_loop
+
+
+class Async:
+    def __init__(
+        self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon=None
+    ):
+        self._group = group
+        self._target = target
+        self.name = name
+        self._args = args
+        self._kwargs = kwargs or {}
+        self.daemon = daemon
+        self._read_fut = None
+        if target is None:
+            raise ValueError("Target function must be provided.")
+
+    def start(self):
+        self._read_fut = asyncio.run_coroutine_threadsafe(
+            self._target(*self._args, **self._kwargs),
+            run_event_loop(self._group, self.name, self.daemon),
+        )
+
+    def join(self, timeout: Optional[float] = None):
+        if self._read_fut is None:
+            raise RuntimeError("Async task not started.")
+        return self._read_fut.result(timeout=timeout)
+
+    def is_alive(self) -> bool:
+        if self._read_fut is None:
+            return False
+        return not self._read_fut.done()
+
+
 class Waitable(ABC):
     def __init__(self):
         self.__pid = current_process().pid
@@ -68,7 +110,7 @@ class MockWaitable(Waitable):
         pass
 
 
-class ThreadWaitableArgs(BaseModel):
+class ThreadWaitableArgs(BaseModel, frozen=True):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     context_event: Event = Event()
     start_event: Event = Event()
@@ -80,7 +122,7 @@ class ThreadWaitableArgs(BaseModel):
         return Thread
 
 
-class ProcessWaitableArgs(BaseModel):
+class ProcessWaitableArgs(BaseModel, frozen=True):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     context_event: synchronize.Event = Field(default_factory=SpawnEvent)
     start_event: synchronize.Event = Field(default_factory=SpawnEvent)
@@ -92,8 +134,23 @@ class ProcessWaitableArgs(BaseModel):
         return SpawnProcess
 
 
+class AsyncWaitableArgs(BaseModel, frozen=True):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    context_event: Event = Event()
+    start_event: Event = Event()
+    exiting_event: Event = Event()
+    exited_event: Event = Event()
+
+    @staticmethod
+    def concurrent_cls() -> Type[Async]:
+        return Async
+
+
+WaitableArgsType = Union[ThreadWaitableArgs, ProcessWaitableArgs, AsyncWaitableArgs]
+
+
 class ConcurrentWaitable(Waitable):
-    def __init__(self, args: Union[ThreadWaitableArgs, ProcessWaitableArgs]):
+    def __init__(self, args: WaitableArgsType):
         super().__init__()
         self.args = args
 
@@ -295,12 +352,10 @@ class ConcurrentProgressHandler(ProgressHandler):
 
     def __init__(self, mode: ConcurrentMode):
         super().__init__()
-        if mode is ConcurrentMode.thread:
-            self._args = ThreadWaitableArgs()
-        elif mode is ConcurrentMode.process:
-            self._args = ProcessWaitableArgs()
-        else:
-            raise ValueError(f"Invalid mode: {mode}")
+        self._args: WaitableArgsType = {
+            ConcurrentMode.thread: ThreadWaitableArgs,
+            ConcurrentMode.process: ProcessWaitableArgs,
+        }[mode]()
         self._mode = mode
         self._concurrent = None
         self._waitable = ConcurrentWaitable(self._args)
@@ -363,17 +418,6 @@ def create_handler(mode: ConcurrentMode) -> ProgressHandler:
         return MockProgressHandler()
     else:
         return ConcurrentProgressHandler(mode)
-
-
-def run_event_loop() -> asyncio.AbstractEventLoop:
-    if current_thread() != main_thread():
-        raise RuntimeError("Event loop must be run in the main thread")
-    event_loop = asyncio.get_event_loop()
-    if not event_loop.is_running():
-        event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(event_loop)
-        Thread(target=event_loop.run_forever, daemon=True).start()
-    return event_loop
 
 
 class ProgressBar:

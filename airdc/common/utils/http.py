@@ -1,5 +1,9 @@
 import json
-import requests
+
+# import requests
+# from requests import RequestException
+import httpx as requests
+from httpx import HTTPStatusError as RequestException
 from typing import Union
 from collections.abc import Callable
 from logging import getLogger
@@ -17,12 +21,12 @@ class RESTfulJson:
     @staticmethod
     def send_get_request(
         url: str, headers: dict
-    ) -> Union[requests.Response, requests.RequestException]:
+    ) -> Union[requests.Response, RequestException]:
         try:
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             return response
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             return e
 
     @classmethod
