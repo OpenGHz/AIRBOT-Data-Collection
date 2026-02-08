@@ -1,13 +1,8 @@
 from enum import auto
 from typing import Dict, Union, List, Tuple, Optional
 from pydantic import BaseModel, ConfigDict
-from airdc.utils import StrEnum
-from mcap_data_loader.utils.basic import (
-    DataStamped,
-    DictDataStamped,
-    ForceSetAttr,
-    force_set_attr,
-)  # noqa: F401
+from mcap_data_loader.basis import StrEnum, DataStamped, DictDataStamped  # noqa: F401
+from mcap_data_loader.utils.basic import ForceSetAttr, force_set_attr  # noqa: F401
 from mcap_data_loader.utils.terminal import Bcolors  # noqa: F401
 from mcap_data_loader.basis.cfgable import ConfigurableBasis, ConfigType  # noqa: F401
 

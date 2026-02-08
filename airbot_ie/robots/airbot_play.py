@@ -33,7 +33,7 @@ from airdc.common.configs.control import (
     PoseServo,
     PosePlan,
 )
-from mcap_data_loader.utils.basic import DictDataStamped, DataStamped
+from mcap_data_loader.basis import DictDataStamped, DataStamped
 from functools import cache
 import numpy as np
 import math
