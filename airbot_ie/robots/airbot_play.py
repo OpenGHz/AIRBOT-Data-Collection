@@ -24,6 +24,7 @@ from mcap_data_loader.utils.tf import (
     is_identity_matrix,
     StaticTFBuffer,
 )
+from mcap_data_loader.utils.rot6d import Rotation6D
 from airdc.common.configs.control import (
     JointControlBasis,
     JointPositionServo,
@@ -432,6 +433,10 @@ class AIRBOTPlay(System):
                 pose = self.rela_obs_ctrl.to_relative(*pose)
             for key, value in zip_equal(self._pose_fields, pose):
                 obs[f"{prefix}/{key}"] = {"t": time_ns(), "data": value}
+            obs[f"{prefix}/rot6d"] = {
+                "t": time_ns(),
+                "data": Rotation6D.quat_to_rot6d(pose[1]),
+            }
             self._metrics["durations"]["capture/pose"] = perf_counter() - start
         start = perf_counter()
         for component in config.components:
