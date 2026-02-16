@@ -3,7 +3,7 @@ from pydantic import PositiveInt, Field
 from time import time_ns, perf_counter
 from collections import defaultdict
 from functools import partial
-from airdc.utils import linear_map, zip_equal, proxy_context
+from airdc.utils import linear_map, proxy_context
 from airdc.common.systems.basis import (
     System,
     SystemConfig,

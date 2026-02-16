@@ -15,6 +15,7 @@ from airdc.common.configs.control import (
 from mcap_data_loader.utils.transformations import quaternion_from_euler
 from pprint import pprint
 import numpy as np
+import time
 
 
 """Test ABS Joint Position Control (default)"""
@@ -106,10 +107,14 @@ airbot_play = AIRBOTPlay(
 config = airbot_play.config
 pprint(config.as_dict)
 assert airbot_play.configure()
+print(time.perf_counter() * 1000)
 airbot_play.switch_mode(SystemMode.RESETTING)
+print(time.perf_counter() * 1000)
 airbot_play.send_action(action)
+print(time.perf_counter() * 1000)
 # the action is sent after switching mode, so the refs are not updated
 obs = airbot_play.capture_observation()
+print(time.perf_counter() * 1000)
 pprint(obs)
 assert obs["eef/pose/position"]["data"] == action[0][0]
 assert obs["eef/pose/orientation"]["data"] == action[0][1]
