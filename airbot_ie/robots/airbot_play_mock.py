@@ -4,17 +4,23 @@ from airbot_ie.robots.airbot_play import (
     RobotMode,
     SpeedProfile,
 )
-from numpy import random
+import numpy as np
 from typing import List
+from airdc.common.utils.curve import SineGenerator
 import logging
 
 
 class AIRBOTArmMock:
     def __init__(self, config=None, **kwargs):
-        self.value = [0.0] * 6
+        length = 6
+        self.value = [0.0] * length
+        self._eef_pos = None
+        self._joint_pos = None
+        self._pose = None
+        self._gen = SineGenerator(length, 0, np.pi / 10, 0.1)
 
     def get_joint_pos(self):
-        return self.value
+        return self._joint_pos or self._gen.update().tolist()
 
     def get_joint_vel(self):
         return [float("nan")] * len(self.value)
@@ -24,7 +30,7 @@ class AIRBOTArmMock:
         return [None] * len(self.value)
 
     def get_eef_pos(self):
-        return [random.uniform(0.0, 0.0471)]
+        return self._eef_pos or [np.random.uniform(0.0, 0.0471)]
         # return [0.0471 / 2]
 
     # def get_eef_vel(self):
@@ -34,7 +40,7 @@ class AIRBOTArmMock:
         return [0.0]
 
     def get_end_pose(self):
-        return [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+        return self._pose or [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
 
     def connect(self):
         return True
@@ -46,11 +52,14 @@ class AIRBOTArmMock:
         self.get_logger().debug(f"{log}: {joint_pos}")
         assert isinstance(joint_pos, list)
         assert len(joint_pos) == 6, joint_pos
+        self._joint_pos = joint_pos
 
     def servo_eef_pos(self, eef_pos, speed_profile=None, log="servo eef pos"):
         self.get_logger().debug(f"{log}: {eef_pos}")
         assert len(eef_pos) == 1, eef_pos
         assert isinstance(eef_pos, list), eef_pos
+        assert isinstance(eef_pos[0], (float, int)), eef_pos
+        self._eef_pos = eef_pos
 
     def move_eef_pos(self, eef_pos, speed_profile=None):
         self.servo_eef_pos(eef_pos, speed_profile, "move eef pos")
@@ -65,6 +74,7 @@ class AIRBOTArmMock:
         assert len(position) == 3
         assert len(orientation) == 4
         assert speed_profile is None
+        self._pose = pose
         self.get_logger().debug(f"{log}: {pose}")
 
     def mit_joint_integrated_control(self, joint_pos, joint_vel, joint_eff, kp, kd):
