@@ -16,6 +16,7 @@ from typing import (
     DefaultDict,
     Type,
     Literal,
+    Tuple,
     final,
 )
 from typing_extensions import Self
@@ -30,6 +31,7 @@ from pydantic import (
 from collections import defaultdict
 from airdc.utils import StrEnum
 from functools import cached_property
+from copy import deepcopy
 
 
 class SystemMode(Enum):
@@ -136,7 +138,7 @@ class System(Sensor):
 
     @final
     def switch_mode(self, mode: SystemMode) -> bool:
-        if (not self.force_switch_mode) and self._current_mode == mode:
+        if (not self.force_switch_mode) and self._current_mode is mode:
             return True
         if self.on_switch_mode(mode):
             self._current_mode = mode
@@ -153,6 +155,10 @@ class System(Sensor):
         return self._current_mode
 
 
+AllInterfaceKind = {"joint_state", "pose", "twist"}
+InterfaceKind = Literal["joint_state", "pose", "twist"]
+
+
 class InterfaceType(StrEnum):
     JOINT_POSITION = auto()
     JOINT_VELOCITY = auto()
@@ -162,6 +168,21 @@ class InterfaceType(StrEnum):
     JOINT_KD = auto()
     POSE = auto()
     TWIST = auto()
+
+    @cached_property
+    def kind(self) -> InterfaceKind:
+        return self.split("_")[0].replace("joint", "joint_state")
+
+    @cached_property
+    def fields(self) -> Tuple[str, ...]:
+        if self.kind == "joint_state":
+            return self.split("_")[1:]
+        elif self is InterfaceType.POSE:
+            return ("position", "orientation")
+        elif self is InterfaceType.TWIST:
+            return ("linear", "angular")
+        else:
+            raise ValueError(f"Unknown interface type: {self}")
 
     @classmethod
     def joint_states(cls, with_name: bool = False) -> Set[Self]:
@@ -176,21 +197,30 @@ class InterfaceType(StrEnum):
 
 
 class ReferenceBase(StrEnum):
-    STATE = auto()  # reference to the current state
-    ACTION = auto()  # reference to the last action
+    """The reference base for relative control, which can be either state or action."""
+
+    STATE = auto()
+    """reference to the state"""
+    ACTION = auto()
+    """reference to the action"""
 
 
 class ReferenceMode(StrEnum):
     """Relative mode for the robot action and observation."""
 
-    ABSOLUTE = auto()  # absolute values
-    INIT_STATE = auto()  # relative to the initial state
-    INIT_ACTION = auto()  # relative to the initial action
-    CURRENT_STATE = auto()  # relative to the current state
-    LAST_ACTION = auto()  # relative to the last action
+    ABSOLUTE = auto()
+    """no reference, the action/observation is in absolute values."""
+    INIT_STATE = auto()
+    """relative to the initial state"""
+    INIT_ACTION = auto()
+    """relative to the initial action"""
+    CURRENT_STATE = auto()
+    """relative to the current state, which is updated after each action"""
+    LAST_ACTION = auto()
+    """relative to the last action, which is updated after each action"""
 
-    def is_delta(self) -> bool:
-        """Check if the reference mode is delta."""
+    def is_step_mode(self) -> bool:
+        """Check if the reference mode is step mode, i.e. need to be updated after each action."""
         return self in {
             ReferenceMode.LAST_ACTION,
             ReferenceMode.CURRENT_STATE,
@@ -207,7 +237,7 @@ class ReferenceMode(StrEnum):
 class ConcurrentConfig(BaseModel, frozen=True):
     """Configuration for concurrent systems."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     blocking: Optional[bool] = None
     """Whether to block until completed. None means use the system default or not blocking."""
@@ -245,12 +275,19 @@ class ObservationConfig(CommonConfig):
     """Configuration for the observation system of the robot."""
 
     interfaces: Set[InterfaceType] = InterfaceType.joint_states()
+    """The interfaces to observe. By default, it observes joint states."""
+    kind_ref: Dict[InterfaceKind, ReferenceMode] = {}
+    """The reference mode for each interface kind.
+    By default, it uses the same top level reference mode for all kinds."""
 
     def model_post_init(self, context):
         assert self.reference_mode not in {
             ReferenceMode.CURRENT_STATE,
             ReferenceMode.LAST_ACTION,
         }, f"Reference mode {self.reference_mode} is not supported for observation."
+        for kind in AllInterfaceKind:
+            if kind not in self.kind_ref:
+                self.kind_ref[kind] = self.reference_mode
 
 
 ActionConfigs = List[Dict[SystemMode, ActionConfig]]
@@ -277,11 +314,13 @@ class SystemConfig(ConcurrentConfig):
     """Observation configurations for each component."""
 
     @field_validator("action", "observation", mode="after")
-    def extend_list(cls, v, info: ValidationInfo) -> List[Any]:
+    def extend_list(cls, v: list, info: ValidationInfo) -> List[Any]:
         """Ensure the field list is always the same length as components."""
         data = info.data
+        length = len(data.get("components", []))
         if len(v) == 1:
-            v *= len(data.get("components", []))
+            for _ in range(length - 1):
+                v.append(deepcopy(v[0]))
         return v
 
     @staticmethod
@@ -307,7 +346,7 @@ class SystemConfig(ConcurrentConfig):
     def as_dict(
         self,
     ) -> Dict[
-        str,
+        str,  # component name
         Dict[
             Literal["action", "observation"],
             Union[Dict[SystemMode, ActionConfig], ObservationConfig],
@@ -331,3 +370,24 @@ class SystemConfig(ConcurrentConfig):
         for comp, act_cfg in zip(self.components, self.action):
             action_types[comp] = {mode: type(cfg) for mode, cfg in act_cfg.items()}
         return action_types
+
+    @cached_property
+    def action_refs(self) -> Dict[str, Dict[SystemMode, ReferenceMode]]:
+        """Get the reference mode for each action config."""
+        action_refs = {}
+        for comp, act_cfg in zip(self.components, self.action):
+            action_refs[comp] = {
+                mode: cfg.reference_mode for mode, cfg in act_cfg.items()
+            }
+        return action_refs
+
+    @cached_property
+    def observation_info(self) -> Dict[str, Dict[InterfaceKind, Set[str]]]:
+        """Get the observation info for each component, which is a dictionary mapping component name to a dictionary mapping interface kind (e.g. joint, pose, etc.) to the set of fields."""
+        info = {}
+        for component, configs in self.as_dict.items():
+            component_info = defaultdict(set)
+            for interface in configs["observation"].interfaces:
+                component_info[interface.kind].update(interface.fields)
+            info[component] = dict(component_info)
+        return info

@@ -1,9 +1,8 @@
-from typing import List, Union, Dict, Tuple, Any, Optional, Literal, Set
-from collections.abc import Iterable
+from typing import List, Union, Dict, Tuple, Any, Optional, Literal
 from pydantic import PositiveInt, Field
 from time import time_ns, perf_counter
 from collections import defaultdict
-from functools import partial, cached_property
+from functools import partial
 from airdc.utils import linear_map, zip_equal, proxy_context
 from airdc.common.systems.basis import (
     System,
@@ -14,8 +13,6 @@ from airdc.common.systems.basis import (
     ObservationConfig,
     SystemMode,
 )
-from airdc.common.utils.relative_control import RelativePoseControl
-from airdc.common.utils.coordinate import CoordinateTools
 from mcap_data_loader.utils.tf import (
     apply_tf_to_pose,
     pose2matrix,
@@ -25,6 +22,7 @@ from mcap_data_loader.utils.tf import (
     StaticTFBuffer,
 )
 from mcap_data_loader.utils.rot6d import Rotation6D
+from mcap_data_loader.utils.rela_abs import PoseGlobalRelaAbs, VectorRelaAbs
 from airdc.common.configs.control import (
     JointControlBasis,
     JointPositionServo,
@@ -33,9 +31,10 @@ from airdc.common.configs.control import (
     PoseControlBasis,
     PoseServo,
     PosePlan,
+    get_control_cfg_kind,
 )
 from mcap_data_loader.basis import DictDataStamped, DataStamped
-from functools import cache
+from functools import cache, wraps
 import numpy as np
 import math
 
@@ -95,38 +94,19 @@ class AIRBOTPlayConfig(SystemConfig):
             f"Backend is not available: {self.backend}, "
             f"available backends: {AVAILABLE_BACKEND}"
         )
-
-    @cached_property
-    def pose_observation(self) -> bool:
-        return InterfaceType.POSE in self.observation[0].interfaces
-
-    @cached_property
-    def relative_action(self) -> bool:
-        return (
-            self.action[0][SystemMode.SAMPLING].reference_mode != ReferenceMode.ABSOLUTE
+        # NOTE: the airbot play robot does not provide pose interface for arm
+        self.observation[self.components.index("arm")].interfaces.discard(
+            InterfaceType.POSE
         )
-
-    @cached_property
-    def relative_observation(self) -> bool:
-        return self.observation[0].reference_mode != ReferenceMode.ABSOLUTE
-
-    @cached_property
-    def joint_fields(self) -> Set[str]:
-        fields = set()
-        prefix = "joint_"
-        for interface in self.observation[0].interfaces:
-            if interface.startswith(prefix):
-                fields.add(interface.removeprefix(prefix))
-        return fields
 
 
 class AIRBOTPlay(System):
     interface: AIRBOTArm
-    force_switch_mode: bool = False
 
     def __init__(self, config: AIRBOTPlayConfig):
         self.config = config
         self._joint_names = dict(zip(self.config.components, self.config.joint_names))
+        self._last_action = defaultdict(dict)
 
     def on_configure(self) -> bool:
         self._init_args()
@@ -140,6 +120,8 @@ class AIRBOTPlay(System):
             JointMIT: RobotMode.MIT_INTEGRATED,
             PoseServo: RobotMode.SERVO_CART_POSE,
         }
+        # NOTE: the first item of the functions must be joint position or pose
+        # if use relative control
         type2func = {
             "arm": {
                 JointPositionServo: interface.servo_joint_pos,
@@ -154,6 +136,7 @@ class AIRBOTPlay(System):
             },
         }
         # mapping action config type to action length
+        # e.g., joint position control needs 6 values for arm and 1 value for eef, the action is like [arm_joint1, arm_joint2, ..., arm_joint6, eef_joint] but when using mit control for arm, the action is like [mit_control_list, eef_joint]
         type2length = {
             "arm": {
                 JointPositionServo: 6,
@@ -179,7 +162,16 @@ class AIRBOTPlay(System):
             for mode, act_cfg in mode_act_cfg.items():
                 cfg_type = type(act_cfg)
                 mode_mapping[mode][component] = type2mode[cfg_type]
-                self._mode2func[mode][component] = type2func[component][cfg_type]
+                # wrap the control function to convert relative action to absolute action if needed, and save the last action for each component if needed for calculating the relative action.
+                cfg_kind = get_control_cfg_kind(act_cfg)
+                self._mode2func[mode][component] = self._rela_ctrl_wrapper(
+                    self._last_action_wrapper(
+                        type2func[component][cfg_type], component, cfg_kind
+                    ),
+                    component,
+                    mode,
+                    cfg_kind,
+                )
                 self._mode2length[mode][component] = type2length[component][cfg_type]
         self._mode_mapping.update(mode_mapping)
         # print(f"mode_mapping: {self._mode_mapping}")
@@ -199,7 +191,6 @@ class AIRBOTPlay(System):
                     "sdk_server.max_acceleration_scaling_factor": 0.5,
                 }
             )
-            self._init_relative_control()
             # check if the robot components are available
             info = interface.get_product_info()
             self.get_logger().info(f"Robot info: {info}")
@@ -218,7 +209,7 @@ class AIRBOTPlay(System):
                 if component == "eef" and not interface.get_eef_pos():
                     self.get_logger().error(f"Can not get joint value of {component}")
                     return False
-                fields = self._js_fields[component]
+                fields = config.observation_info[component]["joint_state"]
                 for field in fields.copy() - {"name"}:
                     js = self._get_joint_state(component, field)
                     if js is None or all(((v is None) or math.isnan(v)) for v in js):
@@ -229,6 +220,51 @@ class AIRBOTPlay(System):
             return True
         return False
 
+    def _rela_ctrl_wrapper(
+        self, func, component: ComponentType, mode: SystemMode, cfg_kind: str
+    ):
+        """Wrap the control function to convert relative action to absolute action if needed.
+        Args:
+            func: the control function to be wrapped whose first argument is the action to be sent to the robot
+            component: the robot component type (e.g., arm or eef)
+            mode: the system mode (e.g., passive or sampling)
+            cfg_kind: the control config kind (e.g., joint or pose)
+        Returns:
+            the wrapped control function
+        """
+        is_rela = self.config.action_refs[component][mode] is not ReferenceMode.ABSOLUTE
+        if not is_rela:
+            return func
+
+        rela_ctrl = self._action_rela_abs[mode][component][cfg_kind]
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # print(f"{args[0]=}")
+            return func(rela_ctrl.to_absolute(args[0]), *args[1:], **kwargs)
+
+        return wrapper
+
+    def _last_action_wrapper(self, func, component: ComponentType, cfg_kind: str):
+        """Wrap the control function to save the last action for each component.
+        Args:
+            func: the control function to be wrapped whose first argument is the action to be sent to the robot
+            component: the robot component type (e.g., arm or eef)
+            cfg_kind: the control config kind (e.g., joint or pose)
+        Returns:
+            the wrapped control function
+        """
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # print(
+            #     f"Saving last action for component {component}, cfg_kind {cfg_kind}: {args[0]}"
+            # )
+            self._last_action[component][cfg_kind] = args[0]
+            return func(*args, **kwargs)
+
+        return wrapper
+
     @cache
     def _match_action_keys(
         self, mode: SystemMode, action_keys: Tuple[str]
@@ -238,21 +274,20 @@ class AIRBOTPlay(System):
         for index, component in enumerate(self.config.components):
             # get the expected keys for each component
             act_cfg = self.config.action[index][mode]
-            act_type = type(act_cfg)
-            if issubclass(act_type, JointControlBasis):
+            if isinstance(act_cfg, JointControlBasis):
                 fields = ["position"]
-                if act_type is JointMIT:
+                if isinstance(act_cfg, JointMIT):
                     fields.extend(["velocity", "effort", "kp", "kd"])
                 key_ends[component] = [
                     f"{component}/joint_state/{field}" for field in fields
                 ]
-            elif issubclass(act_type, PoseControlBasis):
+            elif isinstance(act_cfg, PoseControlBasis):
                 key_ends[component] = [
                     f"{component}/pose/position",
                     f"{component}/pose/orientation",
                 ]
             else:
-                raise ValueError(f"Unsupported action type: {act_type}")
+                raise ValueError(f"Unsupported action type: {type(act_cfg)}")
         # print(f"Expected action key ends: {key_ends}")
         for component, key_ends in key_ends.items():
             for key_end in key_ends:
@@ -284,6 +319,7 @@ class AIRBOTPlay(System):
         self, action: Union[List[float], DictDataStamped[np.ndarray]]
     ) -> None:
         mode = self.current_mode
+        self._update_refs_on_send(mode)
         component_func = self._mode2func[mode]
         if isinstance(action, dict):
             # tuple is hashable and can be cached
@@ -322,18 +358,100 @@ class AIRBOTPlay(System):
                     break
                 cnt += length or 1
 
+    def _get_cur_refs(self) -> Dict[str, Dict[str, Any]]:
+        refs = {}
+        for component in self.config.components:
+            interfaces = self.config.as_dict[component]["observation"].interfaces
+            ref = {}
+            if InterfaceType.POSE in interfaces:
+                ref["pose"] = self._get_pose(component)
+            if InterfaceType.JOINT_POSITION in interfaces:
+                ref["joint_state"] = self._get_joint_state(component, "position")
+            refs[component] = ref
+        return refs
+
+    def _update_refs_on_switch(self, mode: SystemMode):
+        self.get_logger().info(f"Updating refs for mode {mode} for {self.config.port}")
+        cur_refs = self._get_cur_refs()
+        # print(cur_refs)
+        act_rela_obs = self._action_rela_abs[mode]
+        for component, configs in self.config.as_dict.items():
+            # set ref for action
+            action_cfg = configs["action"][mode]
+            ref_mode = action_cfg.reference_mode
+            if ref_mode is not ReferenceMode.ABSOLUTE:
+                component_cur_ref = cur_refs[component]
+                cfg_kind = get_control_cfg_kind(action_cfg)
+                if ref_mode is ReferenceMode.INIT_STATE:
+                    ref = component_cur_ref[cfg_kind]
+                elif ref_mode is ReferenceMode.INIT_ACTION:
+                    # NOTE: only one control type for each component in a mode
+                    # so that the last_action is not a dict
+                    # NOTE: now the same cfg_kind must be included in the observation interfaces when
+                    #
+                    ref = (
+                        self._last_action[component].get(cfg_kind)
+                        or component_cur_ref[cfg_kind]
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported action reference mode: {ref_mode}"
+                    )
+                act_rela_obs[component][cfg_kind].set_ref(ref)
+            # set ref for observation
+            obs_cfg = configs["observation"]
+            component_cur_ref = cur_refs[component]
+            for cfg_kind in component_cur_ref:
+                ref_mode = obs_cfg.kind_ref[cfg_kind]
+                if ref_mode is ReferenceMode.ABSOLUTE:
+                    continue
+                if ref_mode is ReferenceMode.INIT_STATE:
+                    ref = component_cur_ref[cfg_kind]
+                else:
+                    # TODO: is other reference mode needed for observation?
+                    raise NotImplementedError(
+                        f"Unsupported observation reference mode: {ref_mode}"
+                    )
+                # print(
+                #     f"Setting obs ref for component {component}, cfg_kind {cfg_kind}, ref_mode {ref_mode}: {ref}"
+                # )
+                self._obs_rela_abs[component][cfg_kind].set_ref(ref)
+
+    def _update_refs_on_send(self, mode: SystemMode):
+        act_rela_obs = self._action_rela_abs[mode]
+        for component, config in self.config.as_dict.items():
+            action_cfg = config["action"][mode]
+            ref_mode = action_cfg.reference_mode
+            if not ref_mode.is_step_mode():
+                continue
+            cfg_kind = get_control_cfg_kind(action_cfg)
+            cur_refs = self._get_cur_refs()
+            cur_ref = cur_refs[component][cfg_kind]
+            if ref_mode is ReferenceMode.CURRENT_STATE:
+                ref = cur_ref
+            elif ref_mode is ReferenceMode.LAST_ACTION:
+                ref = self._last_action[component].get(cfg_kind, cur_ref)
+            else:  # this should not happen
+                raise NotImplementedError(
+                    f"Unsupported action reference mode: {ref_mode}"
+                )
+            act_rela_obs[component][cfg_kind].set_ref(ref)
+
     def on_switch_mode(self, mode: SystemMode) -> bool:
-        # TODO: there
-        robot_mode = self._mode_mapping[mode]
-        if isinstance(robot_mode, RobotMode):
-            robot_mode = {comp: robot_mode for comp in self.config.components}
-        return self.interface.switch_mode(robot_mode["arm"])
+        # update the ref pose after each mode switch
+        self._update_refs_on_switch(mode)
+        if self.current_mode is not mode:
+            # self.get_logger()(f"Switching to mode {mode} for {self.config.port}")
+            robot_mode = self._mode_mapping[mode]
+            if isinstance(robot_mode, RobotMode):
+                robot_mode = {comp: robot_mode for comp in self.config.components}
+            return self.interface.switch_mode(robot_mode["arm"])
+        return True
 
     def _get_tf_key(self, component: str, frame: str) -> str:
         return f"{component}.{frame}"
 
     def _init_args(self):
-        self._js_fields = defaultdict(lambda: self.config.joint_fields)
         self._pose_fields = ("position", "orientation")
         self._post_capture = defaultdict(dict)
         limits: Dict[str, Dict[str, Dict[int, Tuple]]] = {
@@ -385,68 +503,73 @@ class AIRBOTPlay(System):
             [(tgt, src, to_matrix(tf_part)) for tgt, src, tf_part in tf_list]
         )
 
-    def _init_relative_control(self):
-        pose = self.interface.get_end_pose()
-        if self.config.relative_action:
-            # TODO: support absolute mode instead of complex judgment
-            self.rela_act_ctrl = RelativePoseControl(
-                self.config.action[0].reference_mode
-            )
-            self.rela_act_ctrl.update(*pose)
-        if self.config.relative_observation:
-            self.rela_obs_ctrl = RelativePoseControl()
-            self.rela_obs_ctrl.update(*pose)
+        def _get_dict() -> Dict[str, Union[PoseGlobalRelaAbs, VectorRelaAbs]]:
+            return {
+                "pose": PoseGlobalRelaAbs(tolist=True),
+                "joint_state": VectorRelaAbs(tolist=True),
+            }
 
-    def _process_pose(
-        self, pose: Union[List[float], List[list[float]]]
-    ) -> List[list[float]]:
-        # self.get_logger().info(f"Processing pose: {pose}")
-        if not isinstance(pose[0], Iterable):
-            pose = [pose[:3], pose[3:7]]
-
-        if self.config.action[0].pose_reference_frame == "eef":
-            cur_pose = self.interface.get_end_pose()
-            pose = CoordinateTools.to_world_coordinate(pose, cur_pose)
-        elif self.config.relative_action:
-            if self.config.action[0].reference_mode.is_delta():
-                self.rela_act_ctrl.update(*self.interface.get_end_pose())
-            pose = self.rela_act_ctrl.to_absolute(*pose)
-
-        # self.get_logger().info(f"Processed pose: {pose}")
-        return [list(pose[0]), list(pose[1])]
+        # mode - component - pose/joint - PoseRelaAbs/VectorRelaAbs
+        self._action_rela_abs = defaultdict(lambda: defaultdict(_get_dict))
+        # component - pose/joint - PoseRelaAbs/VectorRelaAbs
+        self._obs_rela_abs = defaultdict(_get_dict)
 
     def capture_observation(
         self, timeout: Optional[float] = None
     ) -> dict[str, dict[str, Union[float, Dict[str, List[float]]]]]:
-        """key: component_name/data_type"""
+        """key: component_name/data_type/field, e.g., arm/pose/position, value: {"t": timestamp in nanosecond, "data": data value}"""
         obs = {}
         config = self.config
-        if config.pose_observation:
-            start = perf_counter()
-            pose = self.interface.get_end_pose()
-            # TODO: arm/pose?
-            prefix = "eef/pose"
-            # print(f"Raw pose: {pose}")
-            pose = self._post_capture.get(prefix, lambda *args: args)(*pose)
-            # print(f"Post processed pose: {pose}")
-            if config.relative_observation:
-                pose = self.rela_obs_ctrl.to_relative(*pose)
-            for key, value in zip_equal(self._pose_fields, pose):
-                obs[f"{prefix}/{key}"] = {"t": time_ns(), "data": value}
-            obs[f"{prefix}/rot6d"] = {
-                "t": time_ns(),
-                "data": Rotation6D.quat_to_rot6d(pose[1]),
-            }
-            self._metrics["durations"]["capture/pose"] = perf_counter() - start
-        start = perf_counter()
-        for component in config.components:
-            for field in self._js_fields[component]:
-                obs[f"{component}/joint_state/{field}"] = {
-                    "t": time_ns(),
-                    "data": self._get_joint_state(component, field),
-                }
-        self._metrics["durations"]["capture/joint_state"] = perf_counter() - start
+        for component, info in config.observation_info.items():
+            for kind, fields in info.items():
+                self._update_kind_data(obs, component, kind, fields)
         return obs
+
+    def _get_rela_obs(self, component: str, kind: str, data):
+        ref_mode = self.config.as_dict[component]["observation"].kind_ref[kind]
+        if ref_mode is ReferenceMode.INIT_STATE:
+            data = self._obs_rela_abs[component][kind].to_relative(data)
+        elif ref_mode is ReferenceMode.ABSOLUTE:
+            data = None
+        else:
+            raise NotImplementedError(
+                f"Unsupported observation reference mode: {ref_mode}"
+            )
+        return data
+
+    def _update_kind_data(self, obs, component, kind, fields):
+        start = perf_counter()
+        key_prefix = f"{component}/{kind}"
+        if kind == "joint_state":
+            for field in fields:
+                data = self._get_joint_state(component, field)
+                obs[f"{key_prefix}/{field}"] = {"t": time_ns(), "data": data}
+            key = f"{key_prefix}/position"
+            rela_pos = self._get_rela_obs(component, "joint_state", obs[key]["data"])
+            if rela_pos is not None:
+                obs[key + "_rela"] = {"t": time_ns(), "data": rela_pos}
+        elif kind == "pose":
+
+            def update_pose(pose, suffix: str = ""):
+                for field in fields:
+                    obs[f"{key_prefix}/{field}{suffix}"] = {
+                        "t": time_ns(),
+                        "data": pose[{"position": 0, "orientation": 1}[field]],
+                    }
+                obs[f"{key_prefix}/rot6d{suffix}"] = {
+                    "t": time_ns(),
+                    "data": Rotation6D.quat_to_rot6d(pose[1]),
+                }
+
+            pose = self._get_pose(component)
+            pose = self._post_capture.get(key_prefix, lambda *args: args)(*pose)
+            rela_pose = self._get_rela_obs(component, kind, pose)
+            if rela_pose is not None:
+                update_pose(rela_pose, "_rela")
+            update_pose(pose)
+        else:
+            raise ValueError(f"Unsupported observation kind: {kind}")
+        self._metrics["durations"][f"capture/{key_prefix}"] = perf_counter() - start
 
     def _get_joint_state(self, component: str, field: str) -> List[float]:
         if component == "eef" and field == "velocity":
@@ -466,6 +589,9 @@ class AIRBOTPlay(System):
                 data[index] = process(data[index])
                 # self.get_logger().info(f"Post value: {data[index]}")
             return data
+
+    def _get_pose(self, component: str) -> Tuple[List[float], List[float]]:
+        return self.interface.get_end_pose()
 
     def shutdown(self) -> bool:
         return self.interface.disconnect()

@@ -121,7 +121,7 @@ class VRQuest(ConfigurableBasis):
         self.get_logger().info(f"Updating relative control data for {pos}.")
         self.wait_for_info(pos)
         value = self.get_info_data()[pos]
-        self._info_rela_ctrl[pos].update(value[:3], value[3:7])
+        self._info_rela_ctrl[pos].update_state(value[:3], value[3:7])
 
     def _ros_spin(self):
         while rclpy.ok():

@@ -1,8 +1,8 @@
 from typing import Tuple
-from airdc.common.systems.basis import ActionConfig, InterfaceType
+from airdc.common.systems.basis import ActionConfig, InterfaceType, InterfaceKind
 from enum import Enum
 from pydantic import BaseModel, PositiveFloat, NonNegativeInt
-from typing import List
+from typing import List, Literal
 
 
 class JointControlBasis(ActionConfig):
@@ -119,3 +119,12 @@ class BaseChargeStationParams(BaseModel):
     """Navigation mode for docking."""
     move_to_dock: bool = False
     """Whether to move to the dock position."""
+
+
+def get_control_cfg_kind(control_cfg: ActionConfig) -> InterfaceKind:
+    if isinstance(control_cfg, JointControlBasis):
+        return "joint_state"
+    elif isinstance(control_cfg, PoseControlBasis):
+        return "pose"
+    else:
+        raise ValueError(f"Unsupported control config type: {type(control_cfg)}")

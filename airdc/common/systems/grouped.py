@@ -642,6 +642,12 @@ class GroupedComponentsSystem(System):
         return self._standardize_component_data_key(f"{prefix}/{key}")
 
     def on_switch_mode(self, mode):
+        if mode is SystemMode.PASSIVE:
+            f_mode = SystemMode.SAMPLING
+            self.get_logger().info(f"Switching all followers to {f_mode} mode")
+            if not self._cg_manager.set_role_mode(ComponentRole.f, f_mode):
+                self.get_logger().error("Failed to switch")
+                return False
         self.get_logger().info(f"Switching all leaders to {mode} mode")
         return self._cg_manager.set_role_mode(ComponentRole.l, mode)
 
