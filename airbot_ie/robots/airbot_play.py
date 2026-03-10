@@ -439,7 +439,7 @@ class AIRBOTPlay(System):
 
     def on_switch_mode(self, mode: SystemMode) -> bool:
         # update the ref pose after each mode switch
-        self._update_refs_on_switch(mode)
+        # self._update_refs_on_switch(mode)
         if self.current_mode is not mode:
             # self.get_logger()(f"Switching to mode {mode} for {self.config.port}")
             robot_mode = self._mode_mapping[mode]
