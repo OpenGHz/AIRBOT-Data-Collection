@@ -458,7 +458,7 @@ while True:
             }
             ref_cfg_dir = ref_cfg_path.parent
 
-            param_dict: dict = config["demonstrator"]["instance"]
+            param_dict: dict = config["demonstrator"]
             raw_comps = param_dict.get("components")
             if isinstance(raw_comps, dict):
                 for key, value in raw_comps.items():
