@@ -48,6 +48,7 @@ plt = ["ipykernel", "holoviews"]
 cfg = ["pydantic-settings", "omegaconf >=2.3.0", "hydra-zen"]
 basic = ["bidict", "tqdm", "flatten-dict"]
 all = ["airdc[basic]", "airdc[cfg]", "airdc[soft]", "airdc[hard]", "airdc[cv2]"]
+mujoco = ["mujoco >=3.4.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]

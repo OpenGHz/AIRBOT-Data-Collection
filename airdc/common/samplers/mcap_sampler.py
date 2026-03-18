@@ -88,12 +88,13 @@ class McapDataSampler(DataSampler):
             # Convert all values to strings
             string_dict = {k: json.dumps(v) for k, v in flattened_value.items()}
             writer.add_metadata(key, string_dict)
+
         writer.add_attachment(
             time_ns(),
             time_ns(),
             "component_info",
             MediaType.APPLICATION_JSON,
-            json.dumps(info).encode("utf-8"),
+            json.dumps(info, default=lambda array: array.tolist()).encode("utf-8"),
         )
         log_stamps = data.pop("log_stamps")
         mcap_tool.add_log_stamps_attachment(log_stamps)

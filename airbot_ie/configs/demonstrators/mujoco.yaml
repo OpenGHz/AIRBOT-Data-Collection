@@ -1,0 +1,17 @@
+# @package _global_
+
+demonstrator:
+  _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
+  component:
+    _target_: airdc.common.systems.mujoco_env.MujocoEnv
+    model_path: third_party/xml/scene_single_arm.xml
+    arm_mode: single
+    enabled_sensors:
+      - camera
+      - pose
+    cameras:
+      - name: hand_cam
+        width: 640
+        height: 480
+        enable_color: true
+        enable_depth: false

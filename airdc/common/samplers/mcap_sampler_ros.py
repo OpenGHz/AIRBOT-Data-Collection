@@ -20,7 +20,8 @@ from pydantic import BaseModel
 from functools import cache
 from more_itertools import zip_equal
 from std_msgs.msg import Header
-from sensor_msgs.msg import CameraInfo
+from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
+import numpy as np
 
 
 class MessageDict(TypedDict):
@@ -154,12 +155,23 @@ class McapDataSamplerROS(McapDataSampler):
         return data
 
     def _add_messages(self, key, values, log_stamps):
+        if self._is_tactile_point_cloud(key):
+            for value, log_stamp in zip_equal(values, log_stamps):
+                msg = self._get_tactile_point_cloud_msg(value)
+                topic = self.config.key_remap(key)
+                self._ros_writer.write_message(topic, message=msg, log_time=log_stamp)
+            return True
+
         info = self._process_key(key)
         if info is not None:
             for i, value in enumerate(values):
                 info.add_data(value, log_stamps[i])
             return True
         return super()._add_messages(key, values, log_stamps)
+
+    @cache
+    def _is_tactile_point_cloud(self, key: str) -> bool:
+        return "tactile/point_cloud" in key
 
     @cache
     def _process_key(self, key: str) -> Optional[KeyInfo]:
@@ -180,7 +192,7 @@ class McapDataSamplerROS(McapDataSampler):
     def _get_camera_info(self) -> Dict[str, CameraInfo]:
         all_camera_info = {}
         for key, info in self._info.items():
-            if "camera" in key:
+            if "camera" in key or key.endswith("_cam") or key.startswith("cam_"):
                 for stream_type in ("color", "depth"):
                     stream_cfg = info.get(stream_type, {})
                     camera_info = stream_cfg.get("camera_info")
@@ -194,6 +206,46 @@ class McapDataSamplerROS(McapDataSampler):
                             cam_info_msg
                         )
         return all_camera_info
+
+    @cache
+    def _get_tactile_point_cloud_msg(self, key: str, data):
+        rows = 8
+        cols = 5
+        max_points = rows * cols
+
+        packed_points = np.zeros((max_points, 6), dtype=np.float32)
+        panel_data = data["data"]
+        for i in range(min(len(panel_data), max_points)):
+            row = i // cols
+            col = i % cols
+            packed_points[i, 0] = col * 0.005
+            packed_points[i, 1] = row * 0.005
+            packed_points[i, 2] = 0.0
+            packed_points[i, 3] = panel_data[i, 0]
+            packed_points[i, 4] = panel_data[i, 1]
+            packed_points[i, 5] = panel_data[i, 2]
+
+        fields = [
+            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
+            PointField(name="fx", offset=12, datatype=PointField.FLOAT32, count=1),
+            PointField(name="fy", offset=16, datatype=PointField.FLOAT32, count=1),
+            PointField(name="fz", offset=20, datatype=PointField.FLOAT32, count=1),
+        ]
+
+        pc_msg = PointCloud2()
+        pc_msg.header.stamp = panel_data["t"]
+        pc_msg.header.frame_id = key.removeprefix("/").split("/")[0] + "_tactile_frame"
+        pc_msg.height = rows
+        pc_msg.width = cols
+        pc_msg.fields = fields
+        pc_msg.is_bigendian = False
+        pc_msg.point_step = 24
+        pc_msg.row_step = pc_msg.point_step * pc_msg.width
+        pc_msg.data = packed_points.tobytes()
+        pc_msg.is_dense = True
+        return pc_msg
 
     def save(self, path, data):
         camera_info = self._get_camera_info()

@@ -16,3 +16,4 @@ multirun/
 dist/
 *.mp4
 *.jpg
+third_party/

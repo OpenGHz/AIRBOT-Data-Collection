@@ -142,9 +142,11 @@ class DemonstrateManagerBasis(ConfigurableBasis):
             self.fsm.act(action)
             data = {}
             # only print low dim data
-            for key, value in self.fsm.last_capture.items():
+            last_cap = self.fsm.last_capture
+            for key, value in last_cap.items():
                 if "image" not in key and "depth" not in key:
                     data[key] = value
+            data["keys"] = list(data.keys())
             self.get_logger().info(Bcolors.blue(f"\n{pformat(data)}"))
         else:
             if action is not None:

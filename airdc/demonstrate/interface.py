@@ -184,30 +184,32 @@ class DemonstrateInterface:
             start = time.perf_counter()
             # TODO: Should use a .copy() to avoid the data being updated in-place within the demonstrator, which could lead to data overwriting issues during asynchronous updating?
             data = self.capture()
-            data.update({"log_stamps": time.time_ns()})
 
-            # update the sampler
-            def update_sampler(data: dict):
-                start_sampler = time.perf_counter()
-                for key, value in self._modules.sampler.update(data).items():
-                    self._round_data[key].append(value)
-                self._metrics["durations"]["demonstrate/update/sampler"] = (
-                    time.perf_counter() - start_sampler
+            if not data.get("skip"):
+                data.update({"log_stamps": time.time_ns()})
+
+                # update the sampler
+                def update_sampler(data: dict):
+                    start_sampler = time.perf_counter()
+                    for key, value in self._modules.sampler.update(data).items():
+                        self._round_data[key].append(value)
+                    self._metrics["durations"]["demonstrate/update/sampler"] = (
+                        time.perf_counter() - start_sampler
+                    )
+                    # time.sleep(1 / 10)  # simulate some delay for sampler
+
+                self._submit_action(DemonstrateAction.update, update_sampler, data)
+                # update_sampler(data)  # blocking update
+                # update the progress bar
+                start_bar = time.perf_counter()
+                info.index += 1
+                self._bar.update(info.index)
+                self._metrics["durations"]["demonstrate/update/bar"] = (
+                    time.perf_counter() - start_bar
                 )
-                # time.sleep(1 / 10)  # simulate some delay for sampler
-
-            self._submit_action(DemonstrateAction.update, update_sampler, data)
-            # update_sampler(data)  # blocking update
-            # update the progress bar
-            start_bar = time.perf_counter()
-            info.index += 1
-            self._bar.update(info.index)
-            self._metrics["durations"]["demonstrate/update/bar"] = (
-                time.perf_counter() - start_bar
-            )
-            self._metrics["durations"]["demonstrate/update"] = (
-                time.perf_counter() - start
-            )
+                self._metrics["durations"]["demonstrate/update"] = (
+                    time.perf_counter() - start
+                )
             return self._action_ok(DemonstrateAction.update)
 
     def _show_save_info(self, path: str, flag: bool) -> bool:
