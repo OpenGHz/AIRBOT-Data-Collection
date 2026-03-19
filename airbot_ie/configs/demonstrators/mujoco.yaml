@@ -9,9 +9,16 @@ demonstrator:
     enabled_sensors:
       - camera
       - pose
+      - joint_position
+      - joint_velocity
+      - joint_effort
+    mask_objects: ["floor_1_room_main", "left_follower"]
+    operations: ["grasp", "push", "place", "pull", "rotate"]
     cameras:
       - name: hand_cam
         width: 640
         height: 480
         enable_color: true
         enable_depth: false
+        enable_mask: false
+        enable_heat_map: true

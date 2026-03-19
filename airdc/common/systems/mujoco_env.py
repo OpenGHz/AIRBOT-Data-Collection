@@ -1,4 +1,4 @@
-from airdc.common.utils.sim.mujoco.mujoco_env import (
+from auto_atom.sim.basis.mujoco_env import (
     UnifiedMujocoEnv,
     EnvConfig,
 )
@@ -16,7 +16,7 @@ class MujocoEnv(System):
 
     def capture_observation(self, timeout=None):
         data = self.env.capture_observation()
-        # self.env.update()
+        self.env.update()
         if not self.env.is_updated():
             data["skip"] = True
         return data

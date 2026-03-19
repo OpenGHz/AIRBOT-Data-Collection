@@ -114,6 +114,8 @@ class DemonstrateManagerBasis(ConfigurableBasis):
         self._act(action)
 
     def _act(self, action: ActionType):
+        if action is None:
+            return
         if action is ManagerAction.LOCK:
             self._locked = not self._locked
             self.get_logger().info(
@@ -144,16 +146,20 @@ class DemonstrateManagerBasis(ConfigurableBasis):
             # only print low dim data
             last_cap = self.fsm.last_capture
             for key, value in last_cap.items():
-                if "image" not in key and "depth" not in key:
-                    data[key] = value
-            data["keys"] = list(data.keys())
+                vd = value["data"]
+                if isinstance(vd, bytes):
+                    continue
+                if shape := getattr(vd, "shape", ()):
+                    if sum(shape) > 10:
+                        value = {"t": value["t"], "type": type(vd), "shape": shape}
+                        if dtype := getattr(vd, "dtype", None):
+                            value["dtype"] = dtype
+                data[key] = value
+            data["keys"] = list(last_cap.keys())
             self.get_logger().info(Bcolors.blue(f"\n{pformat(data)}"))
         else:
-            if action is not None:
-                self.get_logger().info(f"Executing action: {action.name}")
-                self.fsm.act(action)
-            else:
-                self.get_logger().warning(f"Invalid: {key}")
+            self.get_logger().info(f"Executing action: {action.name}")
+            self.fsm.act(action)
 
 
 class SelfManagerConfig(BaseModel):
