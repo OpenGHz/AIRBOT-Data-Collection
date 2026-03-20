@@ -44,7 +44,8 @@ demonstrator:
         enable_mask: false
         enable_heat_map: true
 log_jitter: false
-visualizer: null
+visualizer:
+  swap_rgb_bgr: true
 managers:
   self_manager:
     _target_: airdc.managers.basis.SelfManager
@@ -55,6 +56,9 @@ managers:
     operators:
       - type: mujoco
         name: arm
+sampler:
+  av_coder:
+    frame_format: rgb24
 
 sample_limit:
   end_round: 0
