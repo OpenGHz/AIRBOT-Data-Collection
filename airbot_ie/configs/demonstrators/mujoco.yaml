@@ -12,10 +12,10 @@ demonstrator:
     enabled_sensors:
       - camera
       - pose
-      # - joint_position
-      # - joint_velocity
-      # - joint_effort
       - tactile
+      - joint_position
+      - joint_velocity
+      - joint_effort
     mask_objects: ["source_block", "target_pedestal"]
     operations: ["pick", "place", "push", "pull", "press"]
     interests:
@@ -43,6 +43,13 @@ demonstrator:
         enable_depth: true
         enable_mask: false
         enable_heat_map: true
+    viewer:
+      lookat: [0.04, 0.0, 0.1]
+      distance: 0.55
+      azimuth: 135
+      elevation: -28
+      step_delay: 0.03
+      hold_seconds: 3.0
 log_jitter: false
 visualizer:
   swap_rgb_bgr: true
