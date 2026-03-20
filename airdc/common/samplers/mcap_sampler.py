@@ -151,9 +151,12 @@ class McapDataSampler(DataSampler):
 
     @cache
     def _key_to_schema_type(self, key: str) -> FlatBuffersSchemas:
-        is_heat_map = "/heat_map" in key
+        is_heat_map = key.endswith("/heat_map")
         if is_heat_map:
             return FlatBuffersSchemas.MULTI_CHANNEL_IMAGE
+        is_pc2 = key.endswith("/point_cloud2")
+        if is_pc2:
+            return FlatBuffersSchemas.POINT_CLOUD2
         is_color = "/color/" in key
         if is_color:
             save_type = self.config.save_type.color

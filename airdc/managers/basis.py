@@ -149,7 +149,13 @@ class DemonstrateManagerBasis(ConfigurableBasis):
                 vd = value["data"]
                 if isinstance(vd, bytes):
                     continue
-                if shape := getattr(vd, "shape", ()):
+                if isinstance(vd, dict):
+                    vd_data = vd.get("data", None)
+                    if isinstance(vd_data, bytes):
+                        vd_cp = vd.copy()
+                        vd_cp["data"] = f"<{len(vd_data)} bytes>"
+                        value = {"data": vd_cp, "t": value["t"]}
+                elif shape := getattr(vd, "shape", ()):
                     if sum(shape) > 10:
                         value = {"t": value["t"], "type": type(vd), "shape": shape}
                         if dtype := getattr(vd, "dtype", None):
