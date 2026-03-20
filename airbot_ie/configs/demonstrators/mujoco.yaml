@@ -4,23 +4,58 @@ demonstrator:
   _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
     _target_: airdc.common.systems.mujoco_env.MujocoEnv
-    model_path: third_party/xml/scene_single_arm.xml
+    name: mujoco_env
+    model_path: third_party/xml/scene_pick_place_demo.xml
     arm_mode: single
+    sim_freq: 500
+    update_freq: 20
     enabled_sensors:
       - camera
       - pose
-      - joint_position
-      - joint_velocity
-      - joint_effort
+      # - joint_position
+      # - joint_velocity
+      # - joint_effort
       - tactile
-    mask_objects: ["floor_1_room_main", "left_follower"]
-    operations: ["grasp", "push", "place", "pull", "rotate"]
+    mask_objects: ["source_block", "target_pedestal"]
+    operations: ["pick", "place", "push", "pull", "press"]
+    interests:
+      - ["source_block", "target_pedestal"]
+      - ["pick", "place"]
     cameras:
       - name: hand_cam
-        width:  1280
+        width: 1280
+        height: 720
+        enable_color: true
+        enable_depth: true
+        enable_mask: false
+        enable_heat_map: true
+      - name: front_cam
+        width: 1280
+        height: 720
+        enable_color: true
+        enable_depth: true
+        enable_mask: false
+        enable_heat_map: true
+      - name: side_cam
+        width: 1280
         height: 720
         enable_color: true
         enable_depth: true
         enable_mask: false
         enable_heat_map: true
 log_jitter: false
+visualizer: null
+managers:
+  self_manager:
+    _target_: airdc.managers.basis.SelfManager
+    on_reach: abandon
+  auto_atom:
+    _target_: airdc.managers.auto_atom.AutoAtomManager
+    backend: auto_atom.sim.backend.mujoco_backend.build_mujoco_backend
+    operators:
+      - type: mujoco
+        name: arm
+
+sample_limit:
+  end_round: 0
+  rounds: 1

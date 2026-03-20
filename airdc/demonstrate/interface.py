@@ -32,22 +32,24 @@ class DemonstrateInterface:
         """init sampler, visualizers and demonstrator"""
         self._modules = config.modules
         """init sample info"""
-        start_round = self._config.sample_limit.start_round
+        start_round = config.sample_limit.start_round
         if start_round < 0:
-            data_dir = self._config.dataset.absolute_directory
+            data_dir = config.dataset.absolute_directory
             start_round = self._modules.sampler.get_start_episode(data_dir)
         if start_round < 0:
             # detect the number of files in the directory
             start_round = (
-                len(get_items_by_ext(data_dir, self._config.dataset.file_extension))
+                len(get_items_by_ext(data_dir, config.dataset.file_extension))
                 + start_round
                 + 1
             )
-            self._sample_limit = self._config.sample_limit.model_copy(
-                update={"start_round": start_round}
-            )
-        else:
-            self._sample_limit = self._config.sample_limit
+        end_round = config.sample_limit.end_round
+        rounds = config.sample_limit.rounds
+        if end_round == 0 and rounds > 0:
+            end_round = start_round + rounds
+        self._sample_limit = config.sample_limit.model_copy(
+            update={"start_round": start_round, "end_round": end_round}
+        )
         self._sample_info = SampleInfo(episode=start_round)
         """init concurrent actions"""
         concur = self._config.concurrent
@@ -349,7 +351,7 @@ class DemonstrateInterface:
     @property
     def is_reached_round(self) -> bool:
         end_round = self._sample_limit.end_round
-        return end_round > 0 and self._sample_info.episode > end_round
+        return end_round > 0 and self._sample_info.episode >= end_round
 
     @property
     def demonstrator(self) -> Demonstrator:

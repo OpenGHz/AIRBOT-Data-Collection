@@ -11,7 +11,7 @@ from pydantic import (
 )
 from airdc.basis import ConcurrentMode, StrEnum, force_set_attr
 from airdc.common.samplers.basis import DataSampler
-from airdc.common.visualizers.basis import VisualizerBasis
+from airdc.common.visualizers.basis import VisualizerBasis, MockVisualizer
 from airdc.common.demonstrators.basis import Demonstrator
 from airdc.common.configs.component import ComponentConfig
 from airdc.demonstrate.basis import DemonstrateAction, DemonstrateState
@@ -28,6 +28,8 @@ from functools import cache, cached_property
 
 
 class DatasetConfig(BaseModel, frozen=True):
+    """Configuration for the dataset where the demonstration data will be stored."""
+
     root: Path = Path("./data")
     """root directory of all data"""
     directory: str = ""
@@ -45,33 +47,40 @@ class DatasetConfig(BaseModel, frozen=True):
 
 
 class SampleLimit(BaseModel, frozen=True):
-    # the start episode of the data files to be saved
-    # if < 0, the start episode will be automatically
-    # determined by the the number of items in the
-    # dataset directory that matches the file_extension
-    # e.g. if the directory contains 10 files and the
-    # file_extension is ".", and the start_round is -1,
-    # then the start_round will be set to 10
-    start_round: int = 0
-    # the maximum number of samples
-    # if duration is 0, then the size will be used
-    size: NonNegativeInt = 0
-    # the time duration of the data collection
-    # if size is 0, then the duration will be used
-    duration: NonNegativeFloat = 0.0
-    # the total rounds of sampling
-    # if end_round is 0, then the rounds will be used
-    # end_round = start_round + rounds
-    # 0 means no limit
-    rounds: NonNegativeInt = 0
-    # the end episode of sampling
-    # 0 means no limit
-    end_round: NonNegativeInt = 0
+    """Limit for the data sampling."""
 
-    @force_set_attr
-    def model_post_init(self, context):
-        if self.end_round == 0 and self.rounds > 0:
-            self.end_round = self.start_round + self.rounds
+    start_round: int = 0
+    """
+    the start episode of the data files to be saved
+    if < 0, the start episode will be automatically
+    determined by the the number of items in the
+    dataset directory that matches the file_extension
+    e.g. if the directory contains 10 files and the
+    file_extension is ".", and the start_round is -1,
+    then the start_round will be set to 10
+    """
+    size: NonNegativeInt = 0
+    """
+    the maximum number of samples
+    if duration is 0, then the size will be used
+    """
+    duration: NonNegativeFloat = 0.0
+    """
+    the time duration of the data collection,
+    if size is 0, then the duration will be used
+    """
+    rounds: NonNegativeInt = 0
+    """
+    the total rounds of sampling
+    if end_round is 0, then the rounds will be used
+    end_round = start_round + rounds
+    0 means no limit
+    """
+    end_round: NonNegativeInt = 0
+    """
+    the end episode of sampling (not included)
+    0 means no limit
+    """
 
 
 class ConcurrentConfig(BaseModel, frozen=True):
@@ -117,6 +126,12 @@ class DemonstrateModules(BaseModelDictable[str, ConfigurableBasis], frozen=True)
     """the data sampler to be used for data collection"""
     visualizer: VisualizerBasis
     """the visualizer to visualize the sampled data"""
+
+    @field_validator("visualizer", mode="before")
+    def validate_visualizer(cls, v):
+        if v is None:
+            return MockVisualizer()
+        return v
 
     @cached_property
     def modules(self) -> "DemonstrateModules":

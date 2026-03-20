@@ -201,7 +201,7 @@ class SelfManager(DemonstrateManagerBasis):
         state = self.fsm.get_state()
         reached_round = self.fsm.is_reached_round
         if reached_round:
-            self.get_logger().info("Maximum number of rounds reached.")
+            self.get_logger().warning("Maximum number of rounds reached.")
             if self.on_reach_round:
                 return self.fsm.act(self.on_reach_round)
         if state is State.sampling and not reached_round:

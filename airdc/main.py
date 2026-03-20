@@ -4,9 +4,7 @@ from importlib.metadata import version
 from collections import deque, defaultdict
 from pprint import pformat
 from setproctitle import setproctitle
-from typing import Dict
 from airdc.config import DataCollectionArgs
-from airdc.managers.basis import DemonstrateManager
 from airdc.state_machine.fsm import (
     DemonstrateFSM,
     DemonstrateFSMConfig,
@@ -32,7 +30,7 @@ def main() -> int:
         fsm = DemonstrateFSM(
             DemonstrateFSMConfig(state_machine=config.fsm, interface=config)
         )
-        managers: Dict[str, DemonstrateManager] = config.managers.instance_dict
+        managers = config.managers
         for name, manager in managers.items():
             manager.set_fsm(fsm)
             if not manager.configure():

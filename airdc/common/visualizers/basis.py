@@ -116,6 +116,23 @@ class VisualizerBasis(ConfigurableBasis):
         """Shutdown the visualizer."""
 
 
+class MockVisualizer(VisualizerBasis):
+    """A mock visualizer for testing."""
+
+    config: VisualizerConfig
+
+    def on_configure(self):
+        return True
+
+    def on_update(
+        self, data: DictDataStamped, info: Optional[SampleInfo], warm_up: bool = False
+    ) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+
 @runtime_checkable
 class Visualizer(Protocol):
     """Visualizer for visualizing the data."""

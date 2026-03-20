@@ -1,0 +1,45 @@
+# @package _global_
+
+managers:
+  auto_atom:
+    task:
+      env_name: mujoco_env
+      simulator: mujoco
+      seed: 0
+      stages:
+        - name: pick_source
+          object: source_block
+          operation: pick
+          operator: arm
+          param:
+            pre_move:
+              - position: [0.0, 0.0, 0.12]
+                orientation: [-0.70710678, 0.70710678, 0.0, 0.0]
+                reference: object_world
+              - position: [0.0, 0.0, 0.006]
+                orientation: [-0.70710678, 0.70710678, 0.0, 0.0]
+                reference: object_world
+            post_move:
+              - position: [0.0, 0.0, 0.2]
+                orientation: [-0.70710678, 0.70710678, 0.0, 0.0]
+                reference: eef_world
+            eef:
+              close: true
+        - name: place_source
+          object: target_pedestal
+          operation: place
+          operator: arm
+          param:
+            pre_move:
+              - position: [0.0, 0.0, 0.12]
+                orientation: [-0.70710678, 0.70710678, 0.0, 0.0]
+                reference: object_world
+              - position: [0.0, 0.0, 0.058]
+                orientation: [-0.70710678, 0.70710678, 0.0, 0.0]
+                reference: object_world
+            post_move:
+              - position: [0.0, 0.0, 0.16]
+                orientation: [-0.70710678, 0.70710678, 0.0, 0.0]
+                reference: object_world
+            eef:
+              close: false

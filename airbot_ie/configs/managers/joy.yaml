@@ -1,7 +1,7 @@
 # @package _global_
 
 managers:
-  names: [self_manager, joycontrol]
-  instances:
-    - _target_: airdc.managers.basis.SelfManager
-    - _target_: airdc.managers.joycontrol.JoyCallbackManager
+  self_manager:
+    _target_: airdc.managers.basis.SelfManager
+  joycontrol:
+    _target_: airdc.managers.joycontrol.JoyCallbackManager
