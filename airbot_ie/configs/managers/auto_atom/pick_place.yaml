@@ -11,16 +11,17 @@ managers:
       # target_pedestal is a static body (no free joint) — omit it here.
       randomization:
         source_block:
-          x: [-0.03, 0.03]
-          y: [-0.03, 0.03]
+          x: [-0.1, 0.03]
+          y: [-0.1, 0.1]
           # yaw: [-0.524, 0.524] # ±30°
           collision_radius: 0.04
         arm:
-          x: [-0.015, 0.015]
-          y: [-0.015, 0.015]
-          z: [-0.015, 0.015]
+          x: [-0.1, 0.1]
+          y: [-0.1, 0.1]
+          z: [-0.0, 0.03]
           # yaw: [-0.087, 0.087]   # ±5°
           collision_radius: 0.15
+      randomization_debug: false
       stages:
         - name: pick_source
           object: source_block
