@@ -76,10 +76,16 @@ def main() -> int:
         except KeyboardInterrupt:
             logger.info("Keyboard interrupt received. Exiting...")
         finally:
+            # shutdown the managers
             for name, manager in managers.items():
-                logger.info(f"Shutting down: {name}.")
+                logger.info(f"Shutting down manager: {name}.")
                 if not manager.shutdown():
-                    logger.error(f"Failed to shutdown manager: {name}.")
+                    logger.error(f"Failed to shutdown: {name}.")
+            # shutdown the FSM
+            if fsm.get_state() is not DemonstrateState.finalized:
+                logger.info("Shutting down FSM.")
+                fsm.shutdown()
+
         summary = {"Total time taken": f"{time.perf_counter() - total_start:.4f} s"}
         if time_queue:
             avg_time = sum(time_queue) / len(time_queue)

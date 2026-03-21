@@ -348,3 +348,7 @@ class StateMachineBasis:
 
     def get_callbacks(self) -> Dict[CallbackEventType, Dict[Nameable, Callable]]:
         return self._calls_raw
+
+    def shutdown(self):
+        """Shutdown the state machine, release all resources."""
+        pass

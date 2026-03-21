@@ -44,6 +44,9 @@ class DemonstrateFSM(StateMachineBasis):
         """Actions to perform when entering the active state."""
         self.__interface.log_round()
 
+    def shutdown(self):
+        return self.__interface.finish()
+
     @property
     def sample_info(self):
         """Get the sample info."""

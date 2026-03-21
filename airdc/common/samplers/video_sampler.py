@@ -33,7 +33,7 @@ class VideoSampler(DataSampler):
         self._save_stamps = self.config.save_stamps
         return True
 
-    def compose_path(self, directory: Path, episode: int) -> Path:
+    def on_compose_path(self, directory: Path, episode: int) -> Path:
         self._first_encode = {}
         self._stamps = defaultdict(list)
         for coder in self._coders.values():
@@ -110,10 +110,10 @@ class VideoSamplerOnce(VideoSampler):
     def get_start_episode(self, directory: Path):
         return int(directory.exists())
 
-    def compose_path(self, directory, episode):
+    def on_compose_path(self, directory, episode):
         # we do not know the video name until update
         # TODO: use a warm-up phase to determine the data keys
-        super().compose_path(directory.parent, directory.name)
+        super().on_compose_path(directory.parent, directory.name)
         return directory
 
 

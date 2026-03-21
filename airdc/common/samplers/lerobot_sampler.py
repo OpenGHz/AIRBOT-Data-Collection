@@ -112,7 +112,7 @@ class LeRobotDataSampler(DataSampler):
         """
         return True
 
-    def compose_path(self, directory: Path, episode: int) -> Path:
+    def on_compose_path(self, directory: Path, episode: int) -> Path:
         """Compose the episode path for a episode.
 
         Notes:

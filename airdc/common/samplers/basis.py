@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, final
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from typing import Literal, Union, List
@@ -89,6 +89,10 @@ class DataSampler(ConfigurableBasis):
     def __init__(self, config: DataSamplerConfig):
         self.config = config
 
+    def config_post_init(self):
+        super().config_post_init()
+        self._path: Optional[Path] = None
+
     def get_start_episode(self, directory: Path) -> int:
         """Get the starting episode number from the given data directory.
         Args:
@@ -100,7 +104,7 @@ class DataSampler(ConfigurableBasis):
         return -1
 
     @abstractmethod
-    def compose_path(self, directory: Path, episode: int) -> Path:
+    def on_compose_path(self, directory: Path, episode: int) -> Path:
         """Compose the path to the data file. It will be called
         at starting sampling and removing. Before returning, file
         handler can be created to save data in `update` during sampling.
@@ -110,6 +114,11 @@ class DataSampler(ConfigurableBasis):
         Returns:
             Path: The path to the data file.
         """
+
+    @final
+    def compose_path(self, directory: Path, episode: int) -> Path:
+        self._path = self.on_compose_path(directory, episode)
+        return self._path
 
     def clear(self) -> None:
         """Clear the inner data buffer if any.
@@ -155,8 +164,16 @@ class DataSampler(ConfigurableBasis):
             bool: True if the data was saved successfully, False otherwise.
         """
 
+    def _check_path(self, path: Path) -> bool:
+        """Check if the data in the given path is valid"""
+        return True
+
     def shutdown(self) -> None:
         """Shutdown the data sampler, release all resources."""
+        # remove the last invalid episode
+        if self._path and self._path.exists() and not self._check_path(self._path):
+            self.get_logger().warning(f"Removing invalid data at {self._path}")
+            self.remove(self._path)
 
 
 class MockDataSampler(DataSampler):
@@ -173,5 +190,5 @@ class MockDataSampler(DataSampler):
     def remove(self, path: Path):
         return path
 
-    def compose_path(self, directory: Path, episode: int):
+    def on_compose_path(self, directory: Path, episode: int):
         return directory / f"mock_{episode}.data"

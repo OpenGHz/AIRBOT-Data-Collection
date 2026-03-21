@@ -48,7 +48,7 @@ class McapDataSampler(DataSampler):
     def _create_writer(self, path: Path) -> Writer:
         return Writer(str(path)), True
 
-    def compose_path(self, directory: Path, episode: int) -> Path:
+    def on_compose_path(self, directory: Path, episode: int) -> Path:
         path = directory / f"{episode}.mcap"
         # unset here to ensure a fresh writer for each file
         # but the writer is finished in save()
@@ -175,6 +175,9 @@ class McapDataSampler(DataSampler):
         elif key == "log_stamps":
             return FlatBuffersSchemas.NONE
         return FlatBuffersSchemas.FLOAT_ARRAY
+
+    def _check_path(self, path):
+        return McapTool.validate_file(path, True)
 
     @classmethod
     def add_config_metadata(cls, writer: Writer, config: McapDataSamplerConfig):

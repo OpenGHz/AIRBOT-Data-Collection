@@ -22,7 +22,7 @@
 
 以及 `DataSampler` 本身必须实现的抽象方法：
 
-- `def compose_path(self, directory: Path, episode: int) -> Path`：
+- `def on_compose_path(self, directory: Path, episode: int) -> Path`：
 	生成本轮（episode）数据的保存路径。该方法会在开始采样时被调用，也会在删除已保存数据时被调用。
 
 - `def save(self, path: Path, data: Any) -> bool`：
