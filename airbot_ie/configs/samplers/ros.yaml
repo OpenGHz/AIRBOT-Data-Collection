@@ -6,7 +6,8 @@ defaults:
 
 key_merge:
   method:
-    _target_: mcap_data_loader.utils.basic.merge_data_stamped
+    _partial_: true
+    _target_: mcap_data_loader.basis.data_stamped.DataStamped.merge
   pred:
     _target_: mcap_data_loader.utils.dict.PredReplaceTo
     targets: [arm]
