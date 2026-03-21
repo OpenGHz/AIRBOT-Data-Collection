@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from transitions import EventData
 from transitions.extensions import LockedMachine
 from airdc.utils import StrEnum
+import sys
 
 
 State = Optional[Union[str, Enum, dict]]
@@ -329,6 +330,9 @@ class StateMachineBasis:
         return self._action_result[self._last_action]
 
     def on_exception(self, event_data: EventData) -> None:
+        exc_type = sys.exc_info()[0]
+        if exc_type is not None and not issubclass(exc_type, Exception):
+            raise
         self.get_logger().exception(f"{event_data}")
 
     # def finalize_event(self, event_data: EventData) -> None:
