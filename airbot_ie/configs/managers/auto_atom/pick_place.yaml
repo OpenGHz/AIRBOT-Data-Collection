@@ -4,7 +4,6 @@ managers:
   auto_atom:
     task:
       env_name: mujoco_env
-      simulator: mujoco
       seed: 42
       # Pose randomization applied at each reset.
       # source_block has a free joint so its x/y and yaw are randomised.

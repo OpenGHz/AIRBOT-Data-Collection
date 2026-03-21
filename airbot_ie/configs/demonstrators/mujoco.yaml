@@ -61,8 +61,7 @@ managers:
     _target_: airdc.managers.auto_atom.AutoAtomManager
     backend: auto_atom.sim.backend.mujoco_backend.build_mujoco_backend
     operators:
-      - type: mujoco
-        name: arm
+      - name: arm
 
 sampler:
   av_coder:
