@@ -181,12 +181,14 @@ class McapDataSamplerROS(McapDataSampler):
         topic_name, field_name = split
         topic_info = TopicInfo.from_topic_name(topic_name)
         if isinstance(topic_info, TopicInfo):
-            return KeyInfo(
-                key=key,
-                topic_info=topic_info,
-                field=field_name,
-                field_type=topic_info.fields_and_field_types[field_name],
-            )
+            field_type = topic_info.fields_and_field_types.get(field_name)
+            if field_type is not None:
+                return KeyInfo(
+                    key=key,
+                    topic_info=topic_info,
+                    field=field_name,
+                    field_type=field_type,
+                )
 
     @cache
     def _get_camera_info(self) -> Dict[str, CameraInfo]:
