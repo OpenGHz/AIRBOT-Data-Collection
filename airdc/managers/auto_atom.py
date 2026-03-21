@@ -54,5 +54,6 @@ class AutoAtomManager(DemonstrateManagerBasis):
         return True
 
     def on_shutdown(self):
-        self._runner.close()
+        if self._runner is not None:
+            self._runner.close()
         return True
