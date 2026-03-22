@@ -59,7 +59,7 @@ managers:
     on_reach: abandon
   auto_atom:
     _target_: airdc.managers.auto_atom.AutoAtomManager
-    backend: auto_atom.sim.backend.mujoco_backend.build_mujoco_backend
+    backend: auto_atom.backend.mjc.mujoco_backend.build_mujoco_backend
     operators:
       - name: arm
 
