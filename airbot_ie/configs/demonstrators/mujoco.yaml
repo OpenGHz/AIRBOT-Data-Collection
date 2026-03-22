@@ -29,6 +29,7 @@ demonstrator:
         enable_depth: true
         enable_mask: false
         enable_heat_map: true
+        parent_frame: eef_pose
       - name: front_cam
         width: 1280
         height: 720
