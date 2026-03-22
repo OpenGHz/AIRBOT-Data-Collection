@@ -8,6 +8,7 @@ hydra:
       # set environment variables for Graphics Library
       CUDA_VISIBLE_DEVICES: ${cuda_device}
       EGL_VISIBLE_DEVICES: ${cuda_device}
+      MUJOCO_EGL_DEVICE_ID: ${cuda_device}
       EGL_PLATFORM: ${gl_backend}
       MUJOCO_GL: ${gl_backend}
       PYOPENGL_PLATFORM: ${gl_backend}
