@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - auto_atom/mujoco/open_hinge_door@managers.auto_atom
+  - auto_atom/basis
+  - _self_
+
+task_name: open_hinge_door
+scene_name: open_close_hinge_door
+
+sampler:
+  task_info:
+    task_description: open the hinge door
+    skill: [pull]
+    object: [hinge_door]

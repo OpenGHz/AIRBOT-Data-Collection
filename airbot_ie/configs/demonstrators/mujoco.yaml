@@ -7,7 +7,7 @@ demonstrator:
   component:
     _target_: airdc.common.systems.mujoco_env.MujocoEnv
     name: mujoco_env
-    model_path: third_party/xml/scene_${task_name}_demo.xml
+    model_path: third_party/auto-atomic-operation/assets/xmls/scenes/${task_name}/demo.xml
     sim_freq: 500
     update_freq: 100
     enabled_sensors:

@@ -1,29 +1,14 @@
 # @package _global_
 
 defaults:
-  # - mujoco/pick_place@auto_atom
   - auto_atom/mujoco/pick_and_place@managers.auto_atom
+  - auto_atom/basis
   - _self_
 
-# remove the env field since the env is created by the demonstrator
-auto_atom:
-  env: null
-
 task_name: pick_place
-scene_name: ${task_name}
-
-# managers:
-#   auto_atom:
-#     task: ${auto_atom.task}
-
-demonstrator:
-  component:
-    model_path: third_party/xml/scene_${scene_name}_demo.xml
 
 sampler:
   task_info:
-    task_name: ${task_name}
     task_description: pick and place the block onto the pedestal
     skill: [pick, place]
     object: [source_block, target_pedestal]
-    scene: demo # change field name to background?

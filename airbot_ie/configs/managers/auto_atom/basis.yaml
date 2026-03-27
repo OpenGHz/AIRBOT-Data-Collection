@@ -1,0 +1,26 @@
+# @package _global_
+
+# remove the env field since the env is created by the demonstrator
+managers:
+  self_manager:
+    _target_: airdc.managers.basis.SelfManager
+    on_reach: abandon
+  auto_atom:
+    _target_: airdc.managers.auto_atom.AutoAtomManager
+    env: null
+    backend: auto_atom.backend.mjc.mujoco_backend.build_mujoco_backend
+    operators:
+      - name: arm
+    task:
+      env_name: mujoco_env
+
+scene_name: ${task_name}
+
+demonstrator:
+  component:
+    model_path: third_party/auto-atomic-operation/assets/xmls/scenes/${scene_name}/demo.xml
+
+sampler:
+  task_info:
+    task_name: ${task_name}
+    scene: demo # change field name to background?
