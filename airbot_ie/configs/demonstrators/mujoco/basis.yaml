@@ -1,13 +1,14 @@
 # @package _global_
 
-task_name: pick_place
+cam_width: 640
+cam_height: 480
+enable_depth: false
 
 demonstrator:
   _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
     _target_: airdc.common.systems.mujoco_env.MujocoEnv
     name: mujoco_env
-    model_path: third_party/xml/scene_${task_name}_demo.xml
     sim_freq: 500
     update_freq: 100
     enabled_sensors:
@@ -15,36 +16,31 @@ demonstrator:
       - pose
       - tactile
       - joint_position
-      - joint_velocity
+      # - joint_velocity
       - joint_effort
-    mask_objects: ["source_block", "target_pedestal"]
-    operations: ["pick", "place", "push", "pull", "press"]
-    interests:
-      - ["source_block", "target_pedestal"]
-      - ["pick", "place"]
     cameras:
       - name: hand_cam
-        width: 1280
-        height: 720
+        width: ${cam_width}
+        height: ${cam_height}
         enable_color: true
-        enable_depth: true
-        enable_mask: false
-        enable_heat_map: true
-        parent_frame: eef_pose
+        enable_depth: ${enable_depth}
+        # enable_mask: false
+        # enable_heat_map: true
+        # parent_frame: eef_pose
       - name: front_cam
-        width: 1280
-        height: 720
+        width: ${cam_width}
+        height: ${cam_height}
         enable_color: true
-        enable_depth: true
-        enable_mask: false
-        enable_heat_map: true
+        enable_depth: ${enable_depth}
+        # enable_mask: false
+        # enable_heat_map: true
       - name: side_cam
-        width: 1280
-        height: 720
+        width: ${cam_width}
+        height: ${cam_height}
         enable_color: true
-        enable_depth: true
-        enable_mask: false
-        enable_heat_map: true
+        enable_depth: ${enable_depth}
+        # enable_mask: false
+        # enable_heat_map: true
     operators:
       - name: arm
         arm_actuators: []

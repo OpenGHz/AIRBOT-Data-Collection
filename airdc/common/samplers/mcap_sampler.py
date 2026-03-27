@@ -151,6 +151,9 @@ class McapDataSampler(DataSampler):
 
     @cache
     def _key_to_schema_type(self, key: str) -> FlatBuffersSchemas:
+        is_pose = key.endswith("/pose")
+        if is_pose:
+            return FlatBuffersSchemas.POSE_IN_FRAME
         is_heat_map = key.endswith("/heat_map")
         if is_heat_map:
             return FlatBuffersSchemas.MULTI_CHANNEL_IMAGE

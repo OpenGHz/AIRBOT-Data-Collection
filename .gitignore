@@ -17,3 +17,4 @@ dist/
 *.mp4
 *.jpg
 third_party/
+airbot_ie/configs/managers/auto_atom/mujoco

@@ -1,4 +1,4 @@
-from auto_atom.basis.mujoco_env import (
+from auto_atom.basis.mjc.mujoco_env import (
     UnifiedMujocoEnv,
     EnvConfig,
 )
