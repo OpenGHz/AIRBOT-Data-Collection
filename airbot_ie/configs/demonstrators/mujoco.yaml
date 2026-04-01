@@ -85,8 +85,8 @@ sampler:
     station: mujoco
 
 sample_limit:
-  end_round: 0
-  rounds: 1
+  end_round: 1000
+  # rounds: 1000
 
 # update as fast as possible for simulation since the actual update rate is determined by the simulation frequency
 update_rate: 200

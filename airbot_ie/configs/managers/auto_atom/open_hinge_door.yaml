@@ -8,6 +8,14 @@ defaults:
 task_name: open_hinge_door
 scene_name: open_close_hinge_door
 
+demonstrator:
+  component:
+    mask_objects: ["handle"]
+    operations: ["pick", "place", "push", "pull", "press"]
+    interests:
+      - ["handle"]
+      - ["pull"]
+
 sampler:
   task_info:
     task_description: open the hinge door

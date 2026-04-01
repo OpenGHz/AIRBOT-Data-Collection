@@ -1,0 +1,25 @@
+# @package _global_
+
+defaults:
+  - auto_atom/mujoco/cup_on_coaster_gs@managers.auto_atom
+  - auto_atom/basis
+  - _self_
+
+task_name: cup_on_coaster_gs
+scene_name: cup_on_coaster
+gs_dir: ${managers.auto_atom.gs_dir}
+
+demonstrator:
+  component:
+    mask_objects: ["cup", "coaster"]
+    operations: ["pick", "place", "push", "pull", "press"]
+    interests:
+      - ["cup", "coaster"]
+      - ["pick", "place"]
+    gaussian_render: ${managers.auto_atom.env.env.config.gaussian_render}
+
+sampler:
+  task_info:
+    task_description: place the cup on the coaster
+    skill: ["pick", "place"]
+    object: ["cup", "coaster"]

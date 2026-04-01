@@ -1,0 +1,25 @@
+# @package _global_
+
+defaults:
+  - auto_atom/mujoco/arrange_flowers_gs@managers.auto_atom
+  - auto_atom/basis
+  - _self_
+
+task_name: arrange_flowers_gs
+scene_name: arrange_flowers
+gs_dir: ${managers.auto_atom.gs_dir}
+
+demonstrator:
+  component:
+    mask_objects: ["flower", "vase2"]
+    operations: ["pick", "place", "push", "pull", "press"]
+    interests:
+      - ["flower", "vase2"]
+      - ["pick", "place"]
+    gaussian_render: ${managers.auto_atom.env.env.config.gaussian_render}
+
+sampler:
+  task_info:
+    task_description: arrange flowers
+    skill: ["pick", "place"]
+    object: ["flower", "vase2"]

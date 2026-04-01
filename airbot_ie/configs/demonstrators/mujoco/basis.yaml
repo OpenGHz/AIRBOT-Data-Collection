@@ -1,8 +1,11 @@
 # @package _global_
 
-cam_width: 640
-cam_height: 480
-enable_depth: false
+cam_width: 1280
+cam_height: 720
+enable_depth: true
+enable_mask: false
+enable_heat_map: true
+model_suffix: ""
 
 demonstrator:
   _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
@@ -24,23 +27,23 @@ demonstrator:
         height: ${cam_height}
         enable_color: true
         enable_depth: ${enable_depth}
-        # enable_mask: false
-        # enable_heat_map: true
-        # parent_frame: eef_pose
+        enable_mask: ${enable_mask}
+        enable_heat_map: ${enable_heat_map}
+        parent_frame: eef_pose
       - name: front_cam
         width: ${cam_width}
         height: ${cam_height}
         enable_color: true
         enable_depth: ${enable_depth}
-        # enable_mask: false
-        # enable_heat_map: true
+        enable_mask: ${enable_mask}
+        enable_heat_map: ${enable_heat_map}
       - name: side_cam
         width: ${cam_width}
         height: ${cam_height}
         enable_color: true
         enable_depth: ${enable_depth}
-        # enable_mask: false
-        # enable_heat_map: true
+        enable_mask: ${enable_mask}
+        enable_heat_map: ${enable_heat_map}
     operators:
       - name: arm
         arm_actuators: []
@@ -72,8 +75,9 @@ sampler:
     station: mujoco
 
 sample_limit:
-  end_round: 0
-  rounds: 1
+  size: 200
+  end_round: 300
+  # rounds: 1
 
 # update as fast as possible for simulation since the actual update rate is determined by the simulation frequency
 update_rate: 200

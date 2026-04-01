@@ -1,7 +1,8 @@
 # @package _global_
 
 dataset:
-  directory: mcap
+  root: /data2/haizhou
+  directory: mjc
   file_extension: .mcap
 
 sampler:

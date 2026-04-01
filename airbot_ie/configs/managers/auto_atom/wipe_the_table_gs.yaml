@@ -1,0 +1,25 @@
+# @package _global_
+
+defaults:
+  - auto_atom/mujoco/wipe_the_table_gs@managers.auto_atom
+  - auto_atom/basis
+  - _self_
+
+task_name: wipe_the_table_gs
+scene_name: wipe_the_table
+gs_dir: ${managers.auto_atom.gs_dir}
+
+demonstrator:
+  component:
+    mask_objects: ["blue_duck", "white_box"]
+    operations: ["pick", "place", "push", "pull", "press"]
+    interests:
+      - ["blue_duck", "white_box"]
+      - ["pick", "place"]
+    gaussian_render: ${managers.auto_atom.env.env.config.gaussian_render}
+
+sampler:
+  task_info:
+    task_description: wipe the table
+    skill: ["pick", "place"]
+    object: ["blue_duck", "white_box"]

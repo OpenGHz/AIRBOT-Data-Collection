@@ -2,6 +2,7 @@ from auto_atom.basis.mjc.mujoco_env import (
     UnifiedMujocoEnv,
     EnvConfig,
 )
+from auto_atom.basis.mjc.gs_mujoco_env import GSUnifiedMujocoEnv, GSEnvConfig
 from auto_atom.runtime import ComponentRegistry
 from airdc.common.systems.basis import System, SystemMode
 from typing import Tuple, List
@@ -16,14 +17,24 @@ class MujocoEnvConfig(EnvConfig):
     """A tuple of two lists: the first list contains the names of interest objects, and the second list contains the names of interest operations."""
 
 
+class GsMujocoEnvConfig(GSEnvConfig):
+    """Configuration for GS Mujoco environment with registry metadata."""
+
+    name: str
+    """Name of the Mujoco environment to register."""
+    interests: Tuple[List[str], List[str]] = ()
+    """Optional interest objects/operations used by downstream task logic."""
+
+
 class MujocoEnv(System):
     """A system that interfaces with a Mujoco environment."""
 
     config: MujocoEnvConfig
+    interface: UnifiedMujocoEnv
 
     def on_configure(self) -> bool:
         config = self.config
-        self.env = UnifiedMujocoEnv(config)
+        self.env = self.interface
         if config.interests:
             self.env.set_interest_objects_and_operations(*config.interests)
         ComponentRegistry.register_env(config.name, self.env)
@@ -51,3 +62,8 @@ class MujocoEnv(System):
 
     def get_info(self):
         return self.env.get_info()
+
+
+class GsMujocoEnv(MujocoEnv):
+    config: GsMujocoEnvConfig
+    interface: GSUnifiedMujocoEnv

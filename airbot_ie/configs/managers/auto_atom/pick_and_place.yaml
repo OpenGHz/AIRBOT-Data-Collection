@@ -5,7 +5,7 @@ defaults:
   - auto_atom/basis
   - _self_
 
-task_name: pick_place
+task_name: pick_and_place
 
 sampler:
   task_info:

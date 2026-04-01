@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - mujoco/basis
+  - _self_
+
+model_suffix: "_gs"
+
+demonstrator:
+  component:
+    _target_: airdc.common.systems.mujoco_env.GsMujocoEnv
+    # to_numpy: false
