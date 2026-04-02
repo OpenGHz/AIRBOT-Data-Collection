@@ -32,6 +32,7 @@ sampler:
     station: mujoco
 
 sample_limit:
+  size: 200
   # end_round: 300
   rounds: 1
 

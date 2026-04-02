@@ -67,12 +67,11 @@ class SingleBatchedComponentDemonstratorConfig(SingleComponentDemonstratorConfig
 class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
     """Demonstrator for a single component."""
 
-    capture_count: NonNegativeInt = 0
     observation: dict = {}
-    first_capture: bool = True
     batch_size: PositiveInt = 0
     batch_copied: NonNegativeInt = 0
     _component_configured: bool = False
+    _served_batch_ids = set()
     _lock = Lock()
 
     def __init__(self, config: SingleBatchedComponentDemonstratorConfig):
@@ -90,17 +89,14 @@ class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
     def capture_observation(self, timeout=None):
         cls = self.__class__
         with self._lock:
-            if cls.capture_count == 0:
-                cls.observation = self._component.capture_observation(timeout)
-            observation = cls.observation
-            cls.capture_count += 1
-            if cls.capture_count == cls.batch_size:
-                cls.capture_count = 0
-            if cls.first_capture:
-                cls.batch_size = len(next(iter(observation.values()))["data"])
-                cls.first_capture = False
-            cur_obs = {}
             batch_id = self.config.batch_id
+            # A new sampling round starts when the same batch slot requests data again.
+            if not cls.observation or batch_id in cls._served_batch_ids:
+                cls.observation = self._component.capture_observation(timeout)
+                cls._served_batch_ids = set()
+            observation = cls.observation
+            cls.batch_size = len(next(iter(observation.values()))["data"])
+            cur_obs = {}
             skip = observation.get("skip", None)
             for key, value in observation.items():
                 if key == "skip":
@@ -110,6 +106,7 @@ class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
                     "data": value["data"][batch_id],
                     "t": int(value["t"][batch_id]),
                 }
+            cls._served_batch_ids.add(batch_id)
             cur_obs["skip"] = False if skip is None else skip[batch_id]
             return cur_obs
 

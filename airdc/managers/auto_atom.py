@@ -25,7 +25,6 @@ class AutoAtomManager(DemonstrateManagerBasis):
         batch_size = len(fsms)
         reset_mask = np.zeros(batch_size, dtype=bool)
         update_mask = np.zeros(batch_size, dtype=bool)
-        states = set()
         for i, fsm in enumerate(fsms):
             state = fsm.get_state()
             # print(f"FSM {i} state: {state}")
@@ -47,9 +46,7 @@ class AutoAtomManager(DemonstrateManagerBasis):
                 reset_mask[i] = fsm.act(DAction.sample)
             elif state is State.sampling:
                 update_mask[i] = True
-            else:
-                states.add(state)
-        if states:
+        if not (reset_mask.any() or update_mask.any()):
             return True
         if self._runner is None:
             self._runner = TaskRunner().from_config(self.config)
