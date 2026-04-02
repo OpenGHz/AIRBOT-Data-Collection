@@ -50,7 +50,8 @@ class BatchedMujocoEnv(System):
     def on_configure(self) -> bool:
         config = self.config
         self.env = self.interface
-        self.env.set_interest_objects_and_operations(*config.interests)
+        for env in self.env.envs:
+            env.set_interest_objects_and_operations(*config.interests)
         return True
 
     def capture_observation(self, timeout=None):
