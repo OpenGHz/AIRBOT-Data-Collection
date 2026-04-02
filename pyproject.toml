@@ -16,7 +16,7 @@ dependencies = [
     "more-itertools",
     "typing-extensions",
     "setproctitle",
-    "mcap-data-loader ==0.1.8",
+    "mcap-data-loader ==0.2.0",
     "inflection",
 ]
 urls = { repository = "https://github.com/OpenGHz/AIRBOT-Data-Collection" }
@@ -28,7 +28,7 @@ rs = ["pyrealsense2"]
 web = ["fastapi", "uvicorn"]
 v4l2 = ["linuxpy", "PyTurboJPEG"]
 udev = ["pyudev"]
-# mcap = ["mcap-data-loader ==0.1.8"]
+# mcap = ["mcap-data-loader ==0.2.0"]
 mcap_ros1 = ["mcap-ros1-support"]
 image = ["PyTurboJPEG", "av"]
 # no hardware support, such as
