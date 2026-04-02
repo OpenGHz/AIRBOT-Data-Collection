@@ -2,13 +2,6 @@
 
 defaults:
   - auto_atom/mujoco/pick_and_place@managers.auto_atom
+  - auto_atom/mujoco/pick_and_place@demonstrator.component
   - auto_atom/basis
   - _self_
-
-task_name: pick_place
-
-sampler:
-  task_info:
-    task_description: pick and place the block onto the pedestal
-    skill: [pick, place]
-    object: [source_block, target_pedestal]

@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - auto_atom/aao_configs/wipe_the_table_gs@managers.auto_atom
+  - auto_atom/aao_configs/wipe_the_table_gs@demonstrator.component
+  - auto_atom/basis
+  - auto_atom/gs_mixin
+  - _self_

@@ -72,11 +72,20 @@ class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
     first_capture: bool = True
     batch_size: PositiveInt = 0
     batch_copied: NonNegativeInt = 0
+    _component_configured: bool = False
     _lock = Lock()
 
     def __init__(self, config: SingleBatchedComponentDemonstratorConfig):
         super().__init__(config)
         self.config = config
+
+    def on_configure(self) -> bool:
+        cls = self.__class__
+        if cls._component_configured:
+            return True
+        result = self._component.configure()
+        cls._component_configured = result
+        return result
 
     def capture_observation(self, timeout=None):
         cls = self.__class__
@@ -92,8 +101,10 @@ class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
                 cls.first_capture = False
             cur_obs = {}
             batch_id = self.config.batch_id
-            skip = observation.pop("skip", None)
+            skip = observation.get("skip", None)
             for key, value in observation.items():
+                if key == "skip":
+                    continue
                 # print(key, value["data"], batch_id)
                 cur_obs[key] = {
                     "data": value["data"][batch_id],
@@ -110,7 +121,10 @@ class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
             self.get_logger().info(
                 f"Copying demonstrator to batch_id {cls.batch_copied} with {deep=}"
             )
-            return self.copy({"batch_id": cls.batch_copied}, deep)
+            return self.copy(
+                {"batch_id": cls.batch_copied, "component": self.config.component},
+                deep=True,
+            )
 
     def __copy__(self):
         return self._copy(False)

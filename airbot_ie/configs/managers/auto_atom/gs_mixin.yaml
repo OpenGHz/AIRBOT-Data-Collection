@@ -1,0 +1,9 @@
+# @package _global_
+
+model_name: demo_gs
+
+demonstrator:
+  component:
+    _target_: airdc.common.systems.mujoco_gs_env.BatchedMujocoGSEnv
+
+robot_gs_dir: ${managers.auto_atom.robot_gs_dir}

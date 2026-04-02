@@ -3,14 +3,13 @@ from auto_atom.basis.mjc.mujoco_env import (
     BatchedUnifiedMujocoEnv,
     EnvConfig,
 )
-from auto_atom.runtime import ComponentRegistry
 from airdc.common.systems.basis import System, SystemMode
 from typing import Tuple, List
-from pydantic import model_validator
+from pydantic import BaseModel, model_validator
 
 
-class MujocoEnvConfig(EnvConfig):
-    """Configuration for the Mujoco environment system."""
+class EnvConfigMixin(BaseModel):
+    """A mixin class for Mujoco environment systems, providing common configuration and functionality."""
 
     interests: Tuple[List[str], List[str]] = ()
     """A tuple of two lists: the first list contains the names of interest objects, and the second list contains the names of interest operations."""
@@ -19,35 +18,39 @@ class MujocoEnvConfig(EnvConfig):
     @model_validator(mode="before")
     def merge_env_config(cls, values: dict):
         env = values.pop("env", {})
-        from pprint import pprint
+        # from pprint import pprint
 
         if env:
-            print("env:")
-            pprint(env)
+            # print("env:")
+            # pprint(env)
             from omegaconf import OmegaConf
 
+            fields = EnvConfigMixin.model_fields.keys() | EnvConfig.model_fields.keys()
             for key in list(values.keys()):
-                if key not in EnvConfig.model_fields:
+                if key not in fields:
                     values.pop(key)
-            pprint("values before merge:")
-            pprint(values)
+            # pprint("values before merge:")
+            # pprint(values)
             values = OmegaConf.to_object(OmegaConf.merge(env, values))
-        print("values after merge:")
-        pprint(values)
+        # print("values after merge:")
+        # pprint(values)
         return values
+
+
+class MujocoEnvConfig(EnvConfig, EnvConfigMixin):
+    """Configuration for the Mujoco environment system."""
 
 
 class BatchedMujocoEnv(System):
     """A system that interfaces with a Mujoco environment."""
 
     config: MujocoEnvConfig
+    interface: BatchedUnifiedMujocoEnv
 
     def on_configure(self) -> bool:
         config = self.config
-        self.env = BatchedUnifiedMujocoEnv(config)
-        if config.interests:
-            self.env.set_interest_objects_and_operations(*config.interests)
-        ComponentRegistry.register_env(config.name, self.env)
+        self.env = self.interface
+        self.env.set_interest_objects_and_operations(*config.interests)
         return True
 
     def capture_observation(self, timeout=None):

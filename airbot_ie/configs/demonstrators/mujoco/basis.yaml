@@ -9,7 +9,6 @@ demonstrator:
   _target_: airdc.common.demonstrators.single.SingleBatchedComponentDemonstrator
   # _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
-    _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
     batch_size: ${batch_size}
     name: mujoco_env
     viewer:
