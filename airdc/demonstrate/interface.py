@@ -68,6 +68,7 @@ class DemonstrateInterface:
         """store current episode data"""
         self._round_data = defaultdict(list)
         self._metrics = defaultdict(dict)
+        self._finished = False
         """other """
         self._register_fsm_callbacks()
 
@@ -326,11 +327,16 @@ class DemonstrateInterface:
         """
         Finish the demonstration.
         """
+        if self._finished:
+            return True
+        # Ensure any background save work is complete before shutting modules down.
+        self._wait_action_futures(DemonstrateAction.save)
         self.get_logger().info(
             f"Finished the demonstration: from {self._sample_limit.start_round} to {self._sample_info.episode}"
         )
         self._modules.visualizer.shutdown()
         self._modules.sampler.shutdown()
+        self._finished = True
         return True
 
     def log_round(self):

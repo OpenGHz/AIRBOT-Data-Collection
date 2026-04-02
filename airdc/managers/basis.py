@@ -214,6 +214,7 @@ class SelfManager(DemonstrateManagerBasis):
         self.on_reach_round = self.config.on_reach_round
         self.first_configure = [True] * len(self.fsms)
         self.failed_capture = [False] * len(self.fsms)
+        self.reached_round_handled = [False] * len(self.fsms)
         return True
 
     def update(self) -> bool:
@@ -223,9 +224,12 @@ class SelfManager(DemonstrateManagerBasis):
         state = fsm.get_state()
         reached_round = fsm.is_reached_round
         if reached_round:
-            self.get_logger().warning("Maximum number of rounds reached.")
-            if self.on_reach_round:
-                return fsm.act(self.on_reach_round)
+            if not self.reached_round_handled[fsm_idx]:
+                self.reached_round_handled[fsm_idx] = True
+                self.get_logger().warning("Maximum number of rounds reached.")
+                if self.on_reach_round:
+                    return fsm.act(self.on_reach_round)
+            return True
         if state is State.sampling and not reached_round:
             if fsm.is_reached:
                 self.get_logger().info("Sample limitation reached.")
