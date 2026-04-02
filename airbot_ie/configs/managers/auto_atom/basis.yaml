@@ -10,7 +10,9 @@ managers:
     on_reach: abandon
   auto_atom:
     _target_: airdc.managers.auto_atom.AutoAtomManager
-    env: null
+    env:
+      env:
+        _target_: builtins.dict
     backend: auto_atom.backend.mjc.mujoco_backend.build_mujoco_backend
     # operators:
     #   - name: arm

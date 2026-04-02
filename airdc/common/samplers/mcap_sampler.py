@@ -63,6 +63,7 @@ class McapDataSampler(DataSampler):
             if flag := self._is_save_h264(key):
                 self._video_sampler.encode_frame(key, data[key])
             else:
+                # print(f"{key} {type(data[key])}")
                 flag = self._add_messages(key, [data[key]], [data["log_stamps"]])
             if flag:
                 data.pop(key)
