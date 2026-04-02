@@ -18,6 +18,7 @@ class AutoAtomManager(DemonstrateManagerBasis):
 
     def on_configure(self):
         self._runner = None
+        self._runner_done_handled = np.zeros(len(self.fsms), dtype=bool)
         return True
 
     def update(self) -> bool:
@@ -44,6 +45,8 @@ class AutoAtomManager(DemonstrateManagerBasis):
                             # 因为 SAMPLING != RESETTING，所以会 reset
                 """
                 reset_mask[i] = fsm.act(DAction.sample)
+                if reset_mask[i]:
+                    self._runner_done_handled[i] = False
             elif state is State.sampling:
                 update_mask[i] = True
         if not (reset_mask.any() or update_mask.any()):
@@ -53,13 +56,18 @@ class AutoAtomManager(DemonstrateManagerBasis):
         runner = self._runner
         runner.reset(reset_mask)
         update_result = runner.update(update_mask)
-        done_ids = np.where(update_result.done)[0]
-        success_ids = np.where(update_result.success)[0]
+        done_mask = np.asarray(update_result.done, dtype=bool)
+        new_done_mask = update_mask & done_mask & ~self._runner_done_handled
+        success_mask = new_done_mask & np.asarray(update_result.success, dtype=bool)
+        fail_mask = new_done_mask & ~np.asarray(update_result.success, dtype=bool)
+        done_ids = np.where(new_done_mask)[0]
+        success_ids = np.where(success_mask)[0]
         fail_ids = np.setdiff1d(done_ids, success_ids)
         for i in success_ids:
             fsms[int(i)].act(DAction.save)
         for i in fail_ids:
             fsms[int(i)].act(DAction.abandon)
+        self._runner_done_handled[new_done_mask] = True
         return True
 
     def on_shutdown(self):
