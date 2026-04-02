@@ -3,7 +3,8 @@ from airdc.common.systems.basis import System, Sensor, SystemMode
 from airdc.common.utils.progress import MockProgressHandler
 from airdc.demonstrate.configs import DemonstrateAction as Action
 from typing import Union
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, NonNegativeInt, PositiveInt
+from threading import Lock
 
 
 Component = Union[System, Sensor]
@@ -54,3 +55,65 @@ class SingleComponentDemonstrator(Demonstrator):
     @property
     def handler(self):
         return self._handler
+
+
+class SingleBatchedComponentDemonstratorConfig(SingleComponentDemonstratorConfig):
+    """Configuration for the single component demonstrator."""
+
+    batch_id: NonNegativeInt = 0
+    """the batch id of the component to control, default to 0"""
+
+
+class SingleBatchedComponentDemonstrator(SingleComponentDemonstrator):
+    """Demonstrator for a single component."""
+
+    capture_count: NonNegativeInt = 0
+    observation: dict = {}
+    first_capture: bool = True
+    batch_size: PositiveInt = 0
+    batch_copied: NonNegativeInt = 0
+    _lock = Lock()
+
+    def __init__(self, config: SingleBatchedComponentDemonstratorConfig):
+        super().__init__(config)
+        self.config = config
+
+    def capture_observation(self, timeout=None):
+        cls = self.__class__
+        with self._lock:
+            if cls.capture_count == 0:
+                cls.observation = self._component.capture_observation(timeout)
+            observation = cls.observation
+            cls.capture_count += 1
+            if cls.capture_count == cls.batch_size:
+                cls.capture_count = 0
+            if cls.first_capture:
+                cls.batch_size = len(next(iter(observation.values()))["data"])
+                cls.first_capture = False
+            cur_obs = {}
+            batch_id = self.config.batch_id
+            skip = observation.pop("skip", None)
+            for key, value in observation.items():
+                # print(key, value["data"], batch_id)
+                cur_obs[key] = {
+                    "data": value["data"][batch_id],
+                    "t": int(value["t"][batch_id]),
+                }
+            cur_obs["skip"] = False if skip is None else skip[batch_id]
+            return cur_obs
+
+    def _copy(self, deep):
+        """Copy the demonstrator with a new batch id."""
+        cls = self.__class__
+        with self._lock:
+            cls.batch_copied += 1
+            self.get_logger().info(
+                f"Copying demonstrator to batch_id {cls.batch_copied} with {deep=}"
+            )
+            return self.copy({"batch_id": cls.batch_copied}, deep)
+
+    def __copy__(self):
+        return self._copy(False)
+
+    def __deepcopy__(self, memo):
+        return self._copy(True)

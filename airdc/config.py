@@ -1,4 +1,10 @@
-from pydantic import BaseModel, NonNegativeFloat, ConfigDict, field_validator
+from pydantic import (
+    BaseModel,
+    NonNegativeFloat,
+    NonNegativeInt,
+    ConfigDict,
+    field_validator,
+)
 from airdc.demonstrate.configs import DemonstrateConfig
 from airdc.state_machine.fsm import (
     DemonstrateFSMConfig,
@@ -24,6 +30,8 @@ class DataCollectionConfig(BaseModel, frozen=True):
     """log metrics every N seconds, -1 to disable"""
     log_jitter: bool = True
     """whether to log jitter statistics"""
+    batch_size: NonNegativeInt = 0
+    """the batch size for updating the managers, 0 means no batching"""
 
     @field_validator("managers", mode="after")
     def validate_managers(cls, v: dict):

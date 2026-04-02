@@ -122,6 +122,7 @@ class McapDataSampler(DataSampler):
     ) -> FlatBuffersSchemas:
         # self.get_logger().info(f"Adding messages for key: {key}")
         schema_type = self._key_to_schema_type(key)
+        # print(f"Adding messages for key: {key} with schema type: {schema_type}")
         if schema_type is not FlatBuffersSchemas.NONE:
             color_save_type = self.config.save_type.color
             if schema_type is FlatBuffersSchemas.COMPRESSED_IMAGE:

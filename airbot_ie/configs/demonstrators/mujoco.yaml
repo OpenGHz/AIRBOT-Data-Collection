@@ -5,7 +5,7 @@ task_name: pick_place
 demonstrator:
   _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
-    _target_: airdc.common.systems.mujoco_env.MujocoEnv
+    _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
     name: mujoco_env
     model_path: third_party/auto-atomic-operation/assets/xmls/scenes/${task_name}/demo.xml
     sim_freq: 500

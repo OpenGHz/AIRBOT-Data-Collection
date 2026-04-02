@@ -27,12 +27,40 @@ def main() -> int:
         The main manager of data collection.
         """
         logger.info(f"Version: {version(PACKAGE_NAME)}")
-        fsm = DemonstrateFSM(
-            DemonstrateFSMConfig(state_machine=config.fsm, interface=config)
-        )
+
+        batch_size = config.batch_size
+        fsm_cnt = 0
+        raw_directory = config.dataset.directory
+
+        def create_fsm():
+            nonlocal fsm_cnt, config
+            fsm_cnt += 1
+            # NOTE: if there are multiple FSMs, we only keep the visualizer for the first one to avoid duplicated visualization
+            if batch_size > 0 and fsm_cnt == 1:
+                object.__setattr__(config.dataset, "directory", f"{raw_directory}_0")
+            if fsm_cnt > 1:
+                # TODO: may not use deep copy here?
+
+                config = config.model_copy(
+                    update={
+                        "visualizer": None,
+                        "dataset": config.dataset.model_copy(
+                            update={"directory": raw_directory + f"_{fsm_cnt - 1}"},
+                            deep=True,
+                        ),
+                    },
+                    deep=True,
+                )
+            return DemonstrateFSM(
+                DemonstrateFSMConfig(state_machine=config.fsm, interface=config)
+            )
+
+        logger.info(f"Creating {batch_size} FSMs.")
+        fsms = [create_fsm() for _ in range(batch_size or 1)]
+
         managers = config.managers
         for name, manager in managers.items():
-            manager.set_fsm(fsm)
+            manager.set_fsms(fsms)
             if not manager.configure():
                 raise RuntimeError(f"Failed to configure manager: {name}.")
         interval = 1.0 / config.update_rate if config.update_rate > 0 else 0.0
@@ -52,7 +80,7 @@ def main() -> int:
                     metrics["durations"][f"update/manager/{name}"] = (
                         time.perf_counter() - m_start
                     )
-                if fsm.get_state() is DemonstrateState.finalized:
+                if all(fsm.get_state() is DemonstrateState.finalized for fsm in fsms):
                     logger.info("Data collection finished.")
                     break
                 if config.log_metrics >= 0:
@@ -61,7 +89,7 @@ def main() -> int:
                         + pformat(dict(metrics))
                         + "\n"
                         + "FSM Metrics:\n"
-                        + pformat(dict(fsm.metrics))
+                        + pformat([dict(fsm.metrics) for fsm in fsms])
                     )
                 cost_time = time.perf_counter() - start_time
                 time_queue.append(cost_time)
@@ -81,10 +109,11 @@ def main() -> int:
                 logger.info(f"Shutting down manager: {name}.")
                 if not manager.shutdown():
                     logger.error(f"Failed to shutdown: {name}.")
-            # shutdown the FSM
-            if fsm.get_state() is not DemonstrateState.finalized:
-                logger.info("Shutting down FSM.")
-                fsm.shutdown()
+            # shutdown the FSMs
+            for fsm in fsms:
+                if fsm.get_state() is not DemonstrateState.finalized:
+                    logger.info("Shutting down FSM.")
+                    fsm.shutdown()
 
         summary = {"Total time taken": f"{time.perf_counter() - total_start:.4f} s"}
         if time_queue:

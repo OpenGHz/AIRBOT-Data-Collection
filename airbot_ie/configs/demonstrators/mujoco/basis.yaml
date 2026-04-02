@@ -3,56 +3,15 @@
 cam_width: 640
 cam_height: 480
 enable_depth: false
+batch_size: 2
 
 demonstrator:
-  _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
+  _target_: airdc.common.demonstrators.single.SingleBatchedComponentDemonstrator
+  # _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
-    _target_: airdc.common.systems.mujoco_env.MujocoEnv
+    _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
+    batch_size: ${batch_size}
     name: mujoco_env
-    sim_freq: 500
-    update_freq: 100
-    enabled_sensors:
-      - camera
-      - pose
-      - tactile
-      - joint_position
-      # - joint_velocity
-      - joint_effort
-    cameras:
-      - name: hand_cam
-        width: ${cam_width}
-        height: ${cam_height}
-        enable_color: true
-        enable_depth: ${enable_depth}
-        # enable_mask: false
-        # enable_heat_map: true
-        # parent_frame: eef_pose
-      - name: front_cam
-        width: ${cam_width}
-        height: ${cam_height}
-        enable_color: true
-        enable_depth: ${enable_depth}
-        # enable_mask: false
-        # enable_heat_map: true
-      - name: side_cam
-        width: ${cam_width}
-        height: ${cam_height}
-        enable_color: true
-        enable_depth: ${enable_depth}
-        # enable_mask: false
-        # enable_heat_map: true
-    operators:
-      - name: arm
-        arm_actuators: []
-        eef_actuators: [fingers_actuator]
-        eef_output_name: eef
-        pose_site: eef_pose
-        imu_acc: imu_acc
-        imu_gyro: imu_gyro
-        imu_quat: imu_quat
-        pose_sensor_pos: global_gripper_pos
-        pose_sensor_quat: global_gripper_quat
-        tactile_prefixes: ["left_", "right_"]
     viewer:
       lookat: [0.04, 0.0, 0.1]
       distance: 0.55
@@ -60,6 +19,8 @@ demonstrator:
       elevation: -28
       step_delay: 0.03
       hold_seconds: 3.0
+    operations: ["pick", "place", "push", "pull", "press"]
+
 log_jitter: false
 visualizer:
   swap_rgb_bgr: true
@@ -72,8 +33,8 @@ sampler:
     station: mujoco
 
 sample_limit:
-  end_round: 0
+  # end_round: 300
   rounds: 1
 
 # update as fast as possible for simulation since the actual update rate is determined by the simulation frequency
-update_rate: 200
+update_rate: 1

@@ -4,6 +4,7 @@ from airdc.managers.basis import (
     DemonstrateAction as DAction,
 )
 from auto_atom.runtime import TaskRunner, TaskFileConfig
+import numpy as np
 
 
 class AutoAtomConfig(TaskFileConfig):
@@ -20,37 +21,48 @@ class AutoAtomManager(DemonstrateManagerBasis):
         return True
 
     def update(self) -> bool:
-        fsm = self.fsm
-        state = fsm.get_state()
-        if state not in {State.active, State.sampling}:
+        fsms = self.fsms
+        batch_size = len(fsms)
+        reset_mask = np.zeros(batch_size, dtype=bool)
+        update_mask = np.zeros(batch_size, dtype=bool)
+        states = set()
+        for i, fsm in enumerate(fsms):
+            state = fsm.get_state()
+            # print(f"FSM {i} state: {state}")
+            if state is State.active:
+                """
+                1. runner.reset()
+                └─ MujocoTaskBackend.reset()
+                    ├─ env.reset()       ← 重置到 XML 默认值
+                    ├─ operator.home()
+                    └─ _apply_randomization()  ✓ 随机化已应用
+
+                2. fsm.act(DAction.sample)
+                └─ PREPARE_EVENT_BEFORE 回调: demonstrator.react(sample)
+                    └─ SingleComponentDemonstrator.switch_mode(SAMPLING)
+                        └─ BatchedMujocoEnv.on_switch_mode(SAMPLING)
+                            └─ env.reset()   ← !! 随机化被覆盖 !!
+                            # 因为 SAMPLING != RESETTING，所以会 reset
+                """
+                reset_mask[i] = fsm.act(DAction.sample)
+            elif state is State.sampling:
+                update_mask[i] = True
+            else:
+                states.add(state)
+        if states:
             return True
-        elif self._runner is None:
+        if self._runner is None:
             self._runner = TaskRunner().from_config(self.config)
         runner = self._runner
-        if state is State.active:
-            """
-            1. runner.reset()
-            └─ MujocoTaskBackend.reset()
-                ├─ env.reset()       ← 重置到 XML 默认值
-                ├─ operator.home()
-                └─ _apply_randomization()  ✓ 随机化已应用
-
-            2. fsm.act(DAction.sample)
-            └─ PREPARE_EVENT_BEFORE 回调: demonstrator.react(sample)
-                └─ SingleComponentDemonstrator.switch_mode(SAMPLING)
-                    └─ MujocoEnv.on_switch_mode(SAMPLING)
-                        └─ env.reset()   ← !! 随机化被覆盖 !!
-                        # 因为 SAMPLING != RESETTING，所以会 reset
-            """
-            result = fsm.act(DAction.sample)
-            runner.reset()
-            return result
-        elif state is State.sampling:
-            result = runner.update()
-            if result.done:
-                if result.success:
-                    return fsm.act(DAction.save)
-                return fsm.act(DAction.abandon)
+        runner.reset(reset_mask)
+        update_result = runner.update(update_mask)
+        done_ids = np.where(update_result.done)[0]
+        success_ids = np.where(update_result.success)[0]
+        fail_ids = np.setdiff1d(done_ids, success_ids)
+        for i in success_ids:
+            fsms[int(i)].act(DAction.save)
+        for i in fail_ids:
+            fsms[int(i)].act(DAction.abandon)
         return True
 
     def on_shutdown(self):

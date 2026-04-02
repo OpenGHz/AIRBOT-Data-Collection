@@ -187,7 +187,7 @@ class DemonstrateInterface:
             # TODO: Should use a .copy() to avoid the data being updated in-place within the demonstrator, which could lead to data overwriting issues during asynchronous updating?
             data = self.capture()
 
-            if not data.get("skip"):
+            if not data.pop("skip", False):
                 data.update({"log_stamps": time.time_ns()})
 
                 # update the sampler
