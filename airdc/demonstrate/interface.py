@@ -297,9 +297,11 @@ class DemonstrateInterface:
     def _cancel_action_futures(self, action: DemonstrateAction) -> None:
         futures = self._action_futures.get(action, None)
         if futures:
+            remaining_futures = []
             for future in futures:
-                future.cancel()
-            self._action_futures[action] = []
+                if not future.cancel() and not future.done():
+                    remaining_futures.append(future)
+            self._action_futures[action] = remaining_futures
 
     def _wait_action_futures(self, action: DemonstrateAction) -> None:
         # drop the done futures
@@ -315,7 +317,10 @@ class DemonstrateInterface:
 
     def abandon(self) -> bool:
         """Abandon the current episode of sampling."""
+        # Cancel queued sampler updates first, then wait only for the ones already
+        # running since Python futures cannot forcibly stop active threads.
         self._cancel_action_futures(DemonstrateAction.update)
+        self._wait_action_futures(DemonstrateAction.update)
         self._modules.sampler.remove(self._save_path)
         self._clear()
         self.get_logger().info(
@@ -329,7 +334,8 @@ class DemonstrateInterface:
         """
         if self._finished:
             return True
-        # Ensure any background save work is complete before shutting modules down.
+        # Ensure background sampler work is complete before shutting modules down.
+        self._wait_action_futures(DemonstrateAction.update)
         self._wait_action_futures(DemonstrateAction.save)
         self.get_logger().info(
             f"Finished the demonstration: from {self._sample_limit.start_round} to {self._sample_info.episode}"
