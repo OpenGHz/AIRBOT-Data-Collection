@@ -5,3 +5,7 @@ defaults:
   - auto_atom/aao_configs/open_hinge_door@demonstrator.component
   - auto_atom/basis
   - _self_
+
+demonstrator:
+  component:
+    update_freq: 10
