@@ -6,3 +6,8 @@ defaults:
   - auto_atom/basis
   - auto_atom/gs_mixin
   - _self_
+
+
+demonstrator:
+  component:
+    update_freq: 15
