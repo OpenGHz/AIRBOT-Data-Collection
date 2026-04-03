@@ -45,6 +45,10 @@ class McapDataSampler(DataSampler):
         self._mf_writer = McapFlatBuffersWriter(self.config.initial_builder_size)
         return self._video_sampler.configure()
 
+    def clear(self) -> None:
+        """Reset video coders so timestamps start fresh after abandon/clear."""
+        self._video_sampler.clear()
+
     def _create_writer(self, path: Path) -> Writer:
         return Writer(str(path)), True
 

@@ -33,11 +33,15 @@ class VideoSampler(DataSampler):
         self._save_stamps = self.config.save_stamps
         return True
 
+    def clear(self) -> None:
+        """Reset all video coders so timestamps start fresh for the next episode."""
+        for coder in self._coders.values():
+            coder.reset()
+
     def on_compose_path(self, directory: Path, episode: int) -> Path:
         self._first_encode = {}
         self._stamps = defaultdict(list)
-        for coder in self._coders.values():
-            coder.reset()
+        self.clear()
         self._dir = directory / str(episode)
         return self._dir
 
