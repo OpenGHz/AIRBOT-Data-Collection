@@ -52,14 +52,24 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
             # print(f"Processing key: {key}")
             info = TopicInfo.from_topic_name(self._key_remapping(key))
             msg_type = info.msg_type
+            time_ns = d["t"]
             if msg_type is CompressedVideo:
-                d_value = self._coders[key].encode(d_value, timestamp_sec=d["t"] / 1e9)
+                d_value = self._coders[key].encode(d_value, timestamp_sec=time_ns / 1e9)
             else:
-                header = d_value.get("header")
+                header: Dict[str, dict] = d_value.get("header")
                 if header is not None:
-                    if ROS_VERSION == "1" and isinstance(header.get("stamp"), dict):
+                    if isinstance(header.get("stamp"), dict):
                         stamp = header["stamp"]
-                        header["stamp"] = [stamp["sec"], stamp["nsec"]]
+                        sec = stamp.get("secs") or stamp.get("sec") or time_ns / 1e9
+                        nanosec = (
+                            stamp.get("nsecs")
+                            or stamp.get("nanosec")
+                            or (time_ns % 1e9)
+                        )
+                        if ROS_VERSION == "1":
+                            header["stamp"] = [sec, nanosec]
+                        else:
+                            header["stamp"] = {"sec": sec, "nanosec": nanosec}
                     if info.has_stamp:
                         msg_type = info.msg_type_stamped
             self._data_writer.add_message(
@@ -113,7 +123,10 @@ if __name__ == "__main__":
     for i in range(sample_count):
         t = time.time_ns()
         log_stamps.append(t)
-        stamp = {"sec": t // 1_000_000_000, "nsec": t % 1_000_000_000}
+        if ROS_VERSION == "1":
+            stamp = {"secs": t // 1_000_000_000, "nsecs": t % 1_000_000_000}
+        else:
+            stamp = {"sec": t // 1_000_000_000, "nanosec": t % 1_000_000_000}
         header = {"stamp": stamp, "frame_id": "base_link"}
         data = {
             # sensor_msgs/Image
@@ -141,30 +154,54 @@ if __name__ == "__main__":
                 },
                 "t": t,
             },
-            # sensor_msgs/CameraInfo
+            # sensor_msgs/CameraInfo (ROS 1: D/K/R/P, ROS 2: d/k/r/p)
             "/robot/camera/right_wrist/camera_info": {
                 "data": {
                     "header": header,
                     "height": 480,
                     "width": 640,
                     "distortion_model": "plumb_bob",
-                    "D": [0.0] * 5,
-                    "K": [615.0, 0.0, 320.0, 0.0, 615.0, 240.0, 0.0, 0.0, 1.0],
-                    "R": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
-                    "P": [
-                        615.0,
-                        0.0,
-                        320.0,
-                        0.0,
-                        0.0,
-                        615.0,
-                        240.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        1.0,
-                        0.0,
-                    ],
+                    **(
+                        {
+                            "D": [0.0] * 5,
+                            "K": [615.0, 0.0, 320.0, 0.0, 615.0, 240.0, 0.0, 0.0, 1.0],
+                            "R": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+                            "P": [
+                                615.0,
+                                0.0,
+                                320.0,
+                                0.0,
+                                0.0,
+                                615.0,
+                                240.0,
+                                0.0,
+                                0.0,
+                                0.0,
+                                1.0,
+                                0.0,
+                            ],
+                        }
+                        if ROS_VERSION == "1"
+                        else {
+                            "d": [0.0] * 5,
+                            "k": [615.0, 0.0, 320.0, 0.0, 615.0, 240.0, 0.0, 0.0, 1.0],
+                            "r": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+                            "p": [
+                                615.0,
+                                0.0,
+                                320.0,
+                                0.0,
+                                0.0,
+                                615.0,
+                                240.0,
+                                0.0,
+                                0.0,
+                                0.0,
+                                1.0,
+                                0.0,
+                            ],
+                        }
+                    ),
                 },
                 "t": t,
             },
