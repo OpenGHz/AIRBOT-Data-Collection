@@ -1,16 +1,45 @@
 from airdc.common.samplers.mcap_samplers.basis import McapDataSamplerBasis
+from airdc.common.samplers.basis import DataSamplerConfig
 from mcap_data_loader.serialization.ros.mcap import McapROSWriter
 from mcap_data_loader.serialization.ros import TopicInfo, ROS_VERSION
 from mcap_data_loader.basis.data_stamped import DictDataStamped
-from mcap_data_loader.serialization.ros.compressed_video import encode_compressed_video
+from mcap_data_loader.serialization.ros.compressed_video import (
+    CompressedVideoEncoder,
+    CompressedVideoEncoderConfig,
+)
 from typing import Optional, Dict, Any
 from pathlib import Path
 from foxglove_msgs.msg import CompressedVideo
 from functools import cache
+from collections import defaultdict
+
+
+class McapDataSamplerROSStructConfig(DataSamplerConfig):
+    """Configuration for McapDataSamplerROSStruct."""
+
+    compressed_video: CompressedVideoEncoderConfig = CompressedVideoEncoderConfig()
 
 
 class McapDataSamplerROSStruct(McapDataSamplerBasis):
     """McapDataSamplerROSStruct is a data sampler that handles ROS structured messages and saves them in MCAP format."""
+
+    def __init__(self, config: McapDataSamplerROSStructConfig):
+        self.config = config
+
+    def on_configure(self):
+        self._coders = defaultdict(
+            lambda: CompressedVideoEncoder(self.config.compressed_video)
+        )
+        return super().on_configure()
+
+    def clear(self):
+        """Reset video coders so timestamps start fresh after abandon/clear."""
+        for coder in self._coders.values():
+            coder.reset()
+
+    def on_compose_path(self, directory, episode):
+        self.clear()
+        return super().on_compose_path(directory, episode)
 
     def _create_writer(self):
         self._data_writer: McapROSWriter
@@ -24,7 +53,7 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
             info = TopicInfo.from_topic_name(self._key_remapping(key))
             msg_type = info.msg_type
             if msg_type is CompressedVideo:
-                d_value = encode_compressed_video(d_value, timestamp_sec=d["t"] / 1e9)
+                d_value = self._coders[key].encode(d_value, timestamp_sec=d["t"] / 1e9)
             else:
                 header = d_value.get("header")
                 if header is not None:
@@ -37,6 +66,11 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
                 msg_type, key, d_value, d["t"], data["log_stamps"]
             )
         return data
+
+    def save(self, path, data):
+        for coder in self._coders.values():
+            coder.end()
+        return super().save(path, data)
 
     def _key_to_msg_type(self, key: str) -> Optional[str]:
         """Convert a data key to a ROS message type string."""
@@ -64,9 +98,8 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
 if __name__ == "__main__":
     import time
     import numpy as np
-    from airdc.common.samplers.basis import DataSamplerConfig
 
-    sampler = McapDataSamplerROSStruct(DataSamplerConfig())
+    sampler = McapDataSamplerROSStruct(McapDataSamplerROSStructConfig())
 
     sampler.set_info({})
     assert sampler.configure()

@@ -22,6 +22,8 @@ class McapFlbDataSamplerConfig(DataSamplerConfig):
 
 
 class McapFlbDataSampler(McapDataSamplerBasis):
+    """McapFlbDataSampler is a data sampler that handles various types of data, including video frames, and saves them in MCAP format using FlatBuffers serialization."""
+
     def __init__(self, config: McapFlbDataSamplerConfig):
         self.config = config
         self._video_sampler = VideoSampler(

@@ -26,9 +26,7 @@ class VideoSampler(DataSampler):
 
     def on_configure(self):
         """Configure the video data sampler."""
-        self._coders: Dict[str, AvCoder] = defaultdict(
-            lambda: AvCoder(self.config.av_coder)
-        )
+        self._coders = defaultdict(lambda: AvCoder(self.config.av_coder))
         self._frame_stamp_factor = int(1e9 / self.config.av_coder.time_base)
         self._save_stamps = self.config.save_stamps
         return True
