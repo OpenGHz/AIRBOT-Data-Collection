@@ -3,9 +3,9 @@ from pydantic import BaseModel, ConfigDict
 from typing import Dict
 from logging import getLogger
 from airdc.basis import Bcolors
-from airdc.common.samplers.mcap_sampler import (
-    McapDataSampler,
-    McapDataSamplerConfig,
+from airdc.common.samplers.mcap_samplers.sampler_flb import (
+    McapFlbDataSampler,
+    McapFlbDataSamplerConfig,
 )
 
 
@@ -29,11 +29,11 @@ class UploadConfig(BaseModel, frozen=True):
     password: str = ""
 
 
-class AIRBOTMcapDataSamplerConfig(McapDataSamplerConfig):
+class AIRBOTMcapDataSamplerConfig(McapFlbDataSamplerConfig):
     upload: UploadConfig = UploadConfig()
 
 
-class AIRBOTMcapDataSampler(McapDataSampler):
+class AIRBOTMcapDataSampler(McapFlbDataSampler):
     config: AIRBOTMcapDataSamplerConfig
     _info: Dict[str, Dict[str, str]]
 

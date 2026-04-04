@@ -2,9 +2,9 @@ from mcap_data_loader.serialization.flb import (
     McapFlatBuffersWriter,
     FlatBuffersSchemas,
 )
-from airdc.common.samplers.mcap_sampler import (
-    McapDataSampler,
-    McapDataSamplerConfig,
+from airdc.common.samplers.mcap_samplers.sampler_flb import (
+    McapFlbDataSampler,
+    McapFlbDataSamplerConfig,
     McapTool,
     MediaType,
 )
@@ -44,7 +44,7 @@ os.makedirs(output_dir, exist_ok=True)
 folders = [f.path for f in os.scandir(directory) if f.is_dir()]
 # print(folders)
 
-config = McapDataSamplerConfig(task_info=TaskInfo(task_name=config.task_name))
+config = McapFlbDataSamplerConfig(task_info=TaskInfo(task_name=config.task_name))
 
 for folder in folders:
     fd_base = os.path.basename(folder)
@@ -62,7 +62,7 @@ for folder in folders:
     all_schemas = set(FlatBuffersSchemas)
     all_schemas.remove(FlatBuffersSchemas.COMPRESSED_IMAGE)
     flb_writer.register_schemas(all_schemas)
-    McapDataSampler.add_config_metadata(mcap_writer, config)
+    McapFlbDataSampler.add_config_metadata(mcap_writer, config)
     # find all .mp4 files in the folder
     mp4_files = [
         f.path for f in os.scandir(folder) if f.is_file() and f.name.endswith(".mp4")

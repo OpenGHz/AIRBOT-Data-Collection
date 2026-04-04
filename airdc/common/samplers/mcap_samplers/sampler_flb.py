@@ -1,20 +1,16 @@
-import json
 from pydantic import PositiveInt
-from typing import Literal, Dict, List
-from collections.abc import Mapping
-from mcap.writer import Writer
-from flatten_dict import flatten
+from typing import Literal, List
 from time import time_ns
-from pathlib import Path
 from functools import cache
 from mcap_data_loader.utils.av_coder import AvCoderConfig
-from mcap_data_loader.utils.mcap_utils import McapTool, MediaType
+from mcap_data_loader.utils.mcap_utils import MediaType
 from mcap_data_loader.serialization.flb import McapFlatBuffersWriter, FlatBuffersSchemas
-from airdc.common.samplers.basis import DataSampler, DataSamplerConfig
+from airdc.common.samplers.basis import DataSamplerConfig
+from airdc.common.samplers.mcap_samplers.basis import McapDataSamplerBasis
 from airdc.common.samplers.video_sampler import VideoSampler, VideoSamplerConfig
 
 
-class McapDataSamplerConfig(DataSamplerConfig):
+class McapFlbDataSamplerConfig(DataSamplerConfig):
     """Configuration for MCAP data sampler."""
 
     initial_builder_size: PositiveInt = 1024 * 1024  # 1 MB
@@ -25,10 +21,8 @@ class McapDataSamplerConfig(DataSamplerConfig):
     """Configuration for the AV coder."""
 
 
-class McapDataSampler(DataSampler):
-    _info: Dict[str, Dict[str, str]]
-
-    def __init__(self, config: McapDataSamplerConfig):
+class McapFlbDataSampler(McapDataSamplerBasis):
+    def __init__(self, config: McapFlbDataSamplerConfig):
         self.config = config
         self._video_sampler = VideoSampler(
             VideoSamplerConfig(
@@ -42,24 +36,19 @@ class McapDataSampler(DataSampler):
 
     def on_configure(self):
         """Configure the mcap data sampler."""
-        self._mf_writer = McapFlatBuffersWriter(self.config.initial_builder_size)
+        super().on_configure()
         return self._video_sampler.configure()
+
+    def _create_writer(self):
+        return McapFlatBuffersWriter(self.config.initial_builder_size)
 
     def clear(self) -> None:
         """Reset video coders so timestamps start fresh after abandon/clear."""
         self._video_sampler.clear()
 
-    def _create_writer(self, path: Path) -> Writer:
-        return Writer(str(path)), True
-
-    def on_compose_path(self, directory: Path, episode: int) -> Path:
-        path = directory / f"{episode}.mcap"
-        # unset here to ensure a fresh writer for each file
-        # but the writer is finished in save()
-        self._mf_writer.unset_writer()
-        self._mf_writer.set_writer(*self._create_writer(path))
+    def on_compose_path(self, directory, episode):
         self._video_dir = self._video_sampler.compose_path(directory, episode)
-        return path
+        return super().on_compose_path(directory, episode)
 
     def update(self, data: dict):
         """Update the data with the latest frames."""
@@ -73,37 +62,9 @@ class McapDataSampler(DataSampler):
                 data.pop(key)
         return data
 
-    def save(self, path: Path, data: dict) -> bool:
-        """Save the data to a MCAP file."""
-        writer = self._mf_writer.get_writer()
-        mcap_tool = McapTool(writer)
-        info = self._info.copy()
-        # add metadata
-        self.add_config_metadata(writer, self.config)
-        # Handle system info safely
-        # TODO: save system info to attachment?
-        # TODO: should remap info keys?
-        system_info = info.pop("system", {})
-        for key, value in system_info.items():
-            flattened_value = (
-                flatten(value, "path")
-                if isinstance(value, Mapping)
-                else {"value": value}
-            )
-            # Convert all values to strings
-            string_dict = {k: json.dumps(v) for k, v in flattened_value.items()}
-            writer.add_metadata(key, string_dict)
-
-        writer.add_attachment(
-            time_ns(),
-            time_ns(),
-            "component_info",
-            MediaType.APPLICATION_JSON,
-            json.dumps(info, default=lambda array: array.tolist()).encode("utf-8"),
-        )
+    def _on_save(self, path, data):
+        writer = self._data_writer.get_writer()
         log_stamps = data.pop("log_stamps")
-        mcap_tool.add_log_stamps_attachment(log_stamps)
-        mcap_tool.add_topic_statistics_attachment(self._mf_writer.topic_statistics)
         for key, values in data.items():
             if not self._add_messages(key, values, log_stamps):
                 self.get_logger().warning(f"Unknown data type for key: {key}")
@@ -114,7 +75,6 @@ class McapDataSampler(DataSampler):
                     writer.add_attachment(
                         time_ns(), time_ns(), key, MediaType.VIDEO_MP4, video_bytes
                     )
-        writer.finish()
         return True
 
     def remove(self, path):
@@ -142,7 +102,7 @@ class McapDataSampler(DataSampler):
                 )
             key = self.config.key_remap(key)
             _ = [
-                self._mf_writer.add_message(
+                self._data_writer.add_message(
                     schema_type, key, value["data"], value["t"], log_stamps[i], **kwargs
                 )
                 for i, value in enumerate(values)
@@ -184,19 +144,3 @@ class McapDataSampler(DataSampler):
         elif key == "log_stamps":
             return FlatBuffersSchemas.NONE
         return FlatBuffersSchemas.FLOAT_ARRAY
-
-    def _check_path(self, path):
-        return McapTool.validate_file(path, True)
-
-    @classmethod
-    def add_config_metadata(cls, writer: Writer, config: McapDataSamplerConfig):
-        config_dict = config.model_dump(mode="json")
-        config_dict.pop("initial_builder_size")
-        for key, value in config_dict.items():
-            # Convert all values in dict to strings for MCAP metadata
-            # MCAP add_metadata expects dict with string values
-            if isinstance(value, dict):
-                string_dict = {k: json.dumps(v) for k, v in value.items()}
-            else:
-                string_dict = {"value": json.dumps(value)}
-            writer.add_metadata(name=key, data=string_dict)

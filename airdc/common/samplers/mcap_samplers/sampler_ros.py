@@ -1,78 +1,25 @@
-from typing import Optional, ClassVar, Dict, Any
+from typing import Optional, Dict, Any
 from collections.abc import Sequence
-from typing_extensions import Self, TypedDict
-from airdc.common.utils.ros.mcap import Writer, get_mcap_writer
-from airdc.common.samplers.mcap_sampler import (
-    McapDataSamplerConfig,
-    McapDataSampler,
+from airdc.common.samplers.mcap_samplers.sampler_flb import (
+    McapFlbDataSamplerConfig,
+    McapFlbDataSampler,
 )
-from airdc.common.utils.ros import (
-    get_message,
-    get_message_short,
+from mcap_data_loader.serialization.ros import (
+    TopicInfo,
+    MessageDict,
     get_fields_and_field_types,
     time_ns_to_stamp,
     process_camera_info_dict,
     set_message_fields,
     get_current_stamp,
 )
-from inflection import camelize
+from mcap_data_loader.serialization.ros.mcap import Writer, get_mcap_writer
 from pydantic import BaseModel
 from functools import cache
 from more_itertools import zip_equal
 from std_msgs.msg import Header
 from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
 import numpy as np
-
-
-class MessageDict(TypedDict):
-    value: Dict[str, dict]
-    t: int
-    log_time: int
-
-
-class TopicInfo(BaseModel, frozen=True):
-    topic: str
-    msg_name_snake: str
-    msg_type: type
-    msg_type_stamped: Optional[type]
-    fields_and_field_types: Dict[str, type]
-    msg_dict: MessageDict = {"value": {}, "t": 0, "log_time": 0}
-    topic_info: ClassVar[Dict[str, Self]] = {}
-
-    @classmethod
-    def from_topic_name(cls, topic: str) -> Optional[Self]:
-        if topic in cls.topic_info:
-            return cls.topic_info[topic]
-        split = topic.rsplit("/", 1)
-        if len(split) != 2:
-            return None
-        msg_name_no_stamp = split[1]
-        msg_identifier = camelize(msg_name_no_stamp)
-        msg_type = get_message_short(msg_identifier)
-        if msg_type is not None:
-            msg_type_stamped = get_message_short(msg_identifier + "Stamped")
-            fields_and_field_types = {}
-            for filed, field_type_str in get_fields_and_field_types(msg_type).items():
-                field_type = (
-                    list
-                    if field_type_str.startswith("sequence")
-                    or field_type_str.endswith("[]")
-                    else get_message(field_type_str)
-                )
-                fields_and_field_types[filed] = field_type
-            instance = cls(
-                topic=topic,
-                msg_name_snake=msg_name_no_stamp,
-                msg_type=msg_type,
-                msg_type_stamped=msg_type_stamped,
-                fields_and_field_types=fields_and_field_types,
-            )
-            cls.topic_info[topic] = instance
-            return instance
-
-    @property
-    def has_stamp(self) -> bool:
-        return self.msg_type_stamped is not None
 
 
 class KeyInfo(BaseModel, frozen=True):
@@ -140,12 +87,8 @@ class KeyInfo(BaseModel, frozen=True):
         return data
 
 
-class McapDataSamplerROS(McapDataSampler):
+class McapDataSamplerROS(McapFlbDataSampler):
     """Mcap data sampler for ROS data."""
-
-    def _create_writer(self, path):
-        self._ros_writer = Writer(str(path))
-        return get_mcap_writer(self._ros_writer), False
 
     def update(self, data):
         data = super().update(data)
@@ -153,6 +96,10 @@ class McapDataSamplerROS(McapDataSampler):
             topic = self.config.key_remap(topic)
             self._ros_writer.write_message(topic, **msg_data)
         return data
+
+    def _create_mcap_writer(self, path):
+        self._ros_writer = Writer(str(path))
+        return get_mcap_writer(self._ros_writer), False
 
     def _add_messages(self, key, values, log_stamps):
         if self._is_tactile_point_cloud(key):
@@ -258,8 +205,8 @@ class McapDataSamplerROS(McapDataSampler):
 
 
 if __name__ == "__main__":
-    from airdc.common.samplers.mcap_sampler import (
-        McapDataSamplerConfig,
+    from airdc.common.samplers.mcap_samplers.sampler_flb import (
+        McapFlbDataSamplerConfig,
     )
     from pathlib import Path
     import time
@@ -270,7 +217,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
-    sampler = McapDataSamplerROS(McapDataSamplerConfig())
+    sampler = McapDataSamplerROS(McapFlbDataSamplerConfig())
 
     assert sampler.configure()
     directory = Path("data/ros1")

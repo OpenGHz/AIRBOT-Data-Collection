@@ -5,4 +5,4 @@ dataset:
   file_extension: .mcap
 
 sampler:
-  _target_: airdc.common.samplers.mcap_sampler.McapDataSampler
+  _target_: airdc.common.samplers.mcap_samplers.sampler_flb.McapFlbDataSampler

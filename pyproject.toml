@@ -16,8 +16,7 @@ dependencies = [
     "more-itertools",
     "typing-extensions",
     "setproctitle",
-    "mcap-data-loader ==0.2.0",
-    "inflection",
+    "mcap-data-loader ==0.2.1",
 ]
 urls = { repository = "https://github.com/OpenGHz/AIRBOT-Data-Collection" }
 
