@@ -20,3 +20,6 @@ third_party/
 aao_configs
 AGENTS.md
 claude.md
+# pixi environments
+.pixi/*
+!.pixi/config.toml
