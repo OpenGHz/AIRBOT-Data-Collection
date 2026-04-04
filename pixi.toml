@@ -14,4 +14,3 @@ ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 
 [pypi-dependencies]
 airdc = { path = ".", extras = ["mujoco", "assis"] }
-mcap-data-loader = "0.2.1"
