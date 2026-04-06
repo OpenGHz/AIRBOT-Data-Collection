@@ -1,7 +1,9 @@
 defaults:
   - basis
+  - managers: auto_atom/basis
   - demonstrators: auto_atom/basis
   - samplers: ros_struct
+  - _self_
   - override hydra/job_logging: custom
 
 visualizer: null

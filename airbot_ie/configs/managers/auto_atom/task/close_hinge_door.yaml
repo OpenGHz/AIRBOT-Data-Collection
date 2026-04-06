@@ -1,0 +1,5 @@
+# @package _global_
+
+demonstrator:
+  component:
+    update_freq: 10

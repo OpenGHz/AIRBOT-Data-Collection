@@ -1,5 +1,11 @@
 # @package _global_
 
+defaults:
+  - /managers/auto_atom/task: pick_and_place
+  - /managers/auto_atom/aao_configs@managers.auto_atom: ${managers/auto_atom/task}
+  - /managers/auto_atom/aao_configs@demonstrator.component: ${managers/auto_atom/task}
+  - _self_
+
 assets_dir: third_party/auto-atomic-operation/assets
 model_name: demo
 
@@ -27,8 +33,6 @@ demonstrator:
   component:
     _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
     model_path: ${assets_dir}/xmls/scenes/${scene_name}/${model_name}.xml
-    sim_freq: 600
-    update_freq: 30
     env:
       _target_: builtins.dict
 
