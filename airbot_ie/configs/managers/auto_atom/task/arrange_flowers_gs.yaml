@@ -1,10 +1,5 @@
 # @package _global_
 
 defaults:
-  - auto_atom/task/gs_mixin
+  - gs_mixin
   - _self_
-
-
-demonstrator:
-  component:
-    update_freq: 15

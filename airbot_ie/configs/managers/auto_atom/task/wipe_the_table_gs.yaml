@@ -1,5 +1,5 @@
 # @package _global_
 
 defaults:
-  - auto_atom/gs_mixin
+  - gs_mixin
   - _self_
