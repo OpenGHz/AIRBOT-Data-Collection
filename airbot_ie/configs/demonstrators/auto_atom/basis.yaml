@@ -6,6 +6,7 @@ enable_color: true
 enable_depth: true
 enable_mask: false
 enable_heat_map: true
+env_name: auto_atom_env
 
 batch_size: 2
 
@@ -14,7 +15,7 @@ demonstrator:
   # _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
     batch_size: ${batch_size}
-    name: mujoco_env
+    name: ${env_name}
     viewer:
       lookat: [0.04, 0.0, 0.1]
       distance: 0.55
@@ -22,6 +23,7 @@ demonstrator:
       elevation: -28
       step_delay: 0.03
       hold_seconds: 3.0
+    # structured: true
 
 log_jitter: false
 visualizer:

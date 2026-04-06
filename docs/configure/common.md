@@ -69,6 +69,14 @@ rgb_camera:
 
 ## 可视化器
 
+- 数据过滤：支持通过`key_filtering`字段配置可视化器的数据过滤规则，以筛选出支持可视化的数据进行显示，省去额外的无效数据处理代码逻辑。参考`airbot_ie/configs/basis.yaml`中的配置示例。
+- 交换颜色通道：支持通过`swap_rgb_bgr`字段支持`RGB`和`BGR`颜色通道的互转，以适配不同的相机和显示设备。
+- 编码格式：支持通过`pixel_format`字段指定图像数据的编码格式，如`MJPEG`、``YUYV``等，以适配不同的相机输出格式的解码。
+
+### OpenCV
+
+支持可视化`NDArray`和`bytes`类型的图像。`NDArray`类型支持shape为`(H, W, 3)`的彩色图像和`(H, W)`的灰度、深度图像，以及`(H, W, C)`任意通道维度（C不等于3）的图像（例如`heatmap`图像）。
+
 ### 无头模式
 
 如果需要在`headless`模式下运行，即不显示`GUI`窗口，可在配置文件中去除`visualizers`字段，或将`visualizers.names`设置为空列表`[]`。

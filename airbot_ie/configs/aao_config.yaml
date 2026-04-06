@@ -1,7 +1,6 @@
 defaults:
   - basis
-  - managers: keyboard
-  - demonstrators: mujoco/basis
+  - demonstrators: auto_atom/basis
   - samplers: ros_struct
   - override hydra/job_logging: custom
 

@@ -13,6 +13,7 @@ from airdc.common.visualizers.basis import (
 from airdc.common.utils.shareable_numpy import ShareableNumpy
 from airdc.utils import init_logging
 from airdc.basis import DictDataStamped
+from mcap_data_loader.utils.vis import make_heatmap_rgb
 from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import SharedMemoryManager
 from multiprocessing import get_context, current_process
@@ -170,12 +171,15 @@ class OpenCVVisualizer(VisualizerBasis):
             if isinstance(value, bytes):
                 value = decode_image(value, self.config.pixel_format)
             # TODO: why the value is None?
-            if value is None or value.shape[0] == 0 or value.shape[1] == 0:
+            shape = value.shape if value is not None else (0, 0)
+            if shape[0] == 0 or shape[1] == 0:
                 self.get_logger().warning(
                     f"Received wrong image: {value} for key {key}, skipping imshow"
                 )
                 continue
-            if self.config.swap_rgb_bgr:
+            if shape[2] != 3:
+                value = make_heatmap_rgb(value)
+            elif self.config.swap_rgb_bgr:
                 value = value[..., ::-1]
             func(key, value)
         if not self.config.ignore_info:

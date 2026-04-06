@@ -103,12 +103,18 @@ python3 airdc/common/devices/cameras/intelrealsense.py
 
 数据采集的配置选项主要包括示教器/遥操系统（Demonstrator）、采样器（Sampler）、管理器（Manager）、可视化器（Visualizer）、状态机（FSM）以及其他基本配置（如logging、数据保存路径等）。
 
-由于配置参数较多，因此提供了默认配置文件夹`airbot_ie`，一般可在此基础上进行修改。该配置主要使用：
+由于配置参数较多，因此提供了默认配置文件夹`airbot_ie`，一般可在此基础上进行修改。该配置分为真机和仿真两部分：
 
-- 示教器：使用`grouped demonstrator`分组指定leader、follower和observer三种角色将分散的设备进行组合，完成遥操控制和数据采集。
-- 采样器：使用`mcap sampler`将episode数据保存为基于`FlatBuffers` Schema的`.mcap`格式文件。
-- 管理器：使用`keyboard manager`结合`self manager`通过键盘进行数据采集的流程控制。
-- 可视化器：使用`OpenCV visualizer`进行数据的实时显示和监控。
+- 真机（config.yaml）：
+  - 示教器：使用`grouped demonstrator`分组指定leader、follower和observer三种角色将分散的设备进行组合，完成遥操控制和数据采集。
+  - 采样器：使用`mcap sampler`将episode数据保存为基于`FlatBuffers` Schema的`.mcap`格式文件。
+  - 管理器：使用`keyboard manager`结合`self manager`通过键盘进行数据采集的流程控制。
+  - 可视化器：使用`OpenCV visualizer`进行数据的实时显示和监控。
+- 仿真（aao_config.yaml）：
+  - 示教器：使用`SingleBatchedComponentDemonstrator`按batch_size对数据进行分组，底层使用了`auto-atomic-operation`的`MuJoCo`仿真环境。
+  - 采样器：使用`mcap_ros_struct sampler`将episode数据保存为基于`ROS` 消息结构体的`.mcap`格式文件（自动根据环境变量选择`ROS1/ROS2`）。
+  - 管理器：使用`auto_atom manager`结合`self manager`通过不同任务各自的配置进行自动化采集。
+  - 可视化器：默认在配置文件中将可视化设置为null不进行可视化，可自行取消null设置。可视化支持两种模式：一种是基于`mujoco-viewer`的环境内置可视化（可交互式调整），另一种是与真机一样的外置可视化（仅支持`demonstrator.component.structured=false`观测格式）。
 
 部分机器人相关配置说明链接如下：
 

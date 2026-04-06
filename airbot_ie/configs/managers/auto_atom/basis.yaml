@@ -15,7 +15,7 @@ managers:
     # operators:
     #   - name: arm
     task:
-      env_name: mujoco_env
+      env_name: ${env_name}
 
 scene_name: ${managers.auto_atom.scene_name}
 task_name: ${managers.auto_atom.task_name}
@@ -31,7 +31,6 @@ demonstrator:
     update_freq: 30
     env:
       _target_: builtins.dict
-    structured: true
 
 sampler:
   task_info:
