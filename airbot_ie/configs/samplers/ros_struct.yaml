@@ -1,0 +1,8 @@
+# @package _global_
+
+dataset:
+  directory: ros
+  file_extension: .mcap
+
+sampler:
+  _target_: airdc.common.samplers.mcap_samplers.sampler_ros_struct.McapDataSamplerROSStruct

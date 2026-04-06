@@ -1,0 +1,12 @@
+defaults:
+  - basis
+  - managers: keyboard
+  - demonstrators: mujoco/basis
+  - samplers: ros_struct
+  - override hydra/job_logging: custom
+
+visualizer: null
+
+demonstrator:
+  component:
+    viewer: null

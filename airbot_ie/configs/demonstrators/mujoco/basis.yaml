@@ -22,7 +22,6 @@ demonstrator:
       elevation: -28
       step_delay: 0.03
       hold_seconds: 3.0
-    operations: ["pick", "place", "push", "pull", "press"]
 
 log_jitter: false
 visualizer:

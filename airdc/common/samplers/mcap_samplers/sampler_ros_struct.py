@@ -1,7 +1,11 @@
 from airdc.common.samplers.mcap_samplers.basis import McapDataSamplerBasis
 from airdc.common.samplers.basis import DataSamplerConfig
 from mcap_data_loader.serialization.ros.mcap import McapROSWriter
-from mcap_data_loader.serialization.ros import TopicInfo, ROS_VERSION
+from mcap_data_loader.serialization.ros import (
+    TopicInfo,
+    ROS_VERSION,
+    process_camera_info_dict,
+)
 from mcap_data_loader.basis.data_stamped import DictDataStamped
 from mcap_data_loader.serialization.ros.compressed_video import (
     CompressedVideoEncoder,
@@ -10,14 +14,19 @@ from mcap_data_loader.serialization.ros.compressed_video import (
 from typing import Optional, Dict, Any
 from pathlib import Path
 from foxglove_msgs.msg import CompressedVideo
+from sensor_msgs.msg import CameraInfo
+from std_msgs.msg import Float32MultiArray
 from functools import cache
 from collections import defaultdict
+from pydantic import Field
 
 
 class McapDataSamplerROSStructConfig(DataSamplerConfig):
     """Configuration for McapDataSamplerROSStruct."""
 
-    compressed_video: CompressedVideoEncoderConfig = CompressedVideoEncoderConfig()
+    compressed_video: CompressedVideoEncoderConfig = Field(
+        default_factory=CompressedVideoEncoderConfig, alias="av_coder"
+    )
 
 
 class McapDataSamplerROSStruct(McapDataSamplerBasis):
@@ -51,26 +60,44 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
             d_value = d["data"]
             # print(f"Processing key: {key}")
             info = TopicInfo.from_topic_name(self._key_remapping(key))
-            msg_type = info.msg_type
+            if info is None:
+                # consider as Float32MultiArray
+                if not isinstance(d_value, dict):
+                    d_value = {
+                        "data": d_value
+                        if isinstance(d_value, list)
+                        else d_value.tolist()
+                    }
+                has_stamp = False
+                msg_type = Float32MultiArray
+                # raise ValueError(f"Cannot determine message type for key: {key}")
+            else:
+                msg_type = info.msg_type
+                has_stamp = info.has_stamp
+            # print(f"Adding message: topic={key}, type={msg_type}, timestamp={d['t']}")
             time_ns = d["t"]
             if msg_type is CompressedVideo:
                 d_value = self._coders[key].encode(d_value, timestamp_sec=time_ns / 1e9)
+            elif msg_type is CameraInfo:
+                process_camera_info_dict(d_value)
             else:
                 header: Dict[str, dict] = d_value.get("header")
                 if header is not None:
                     if isinstance(header.get("stamp"), dict):
                         stamp = header["stamp"]
-                        sec = stamp.get("secs") or stamp.get("sec") or time_ns / 1e9
+                        sec = (
+                            stamp.get("secs") or stamp.get("sec") or int(time_ns / 1e9)
+                        )
                         nanosec = (
                             stamp.get("nsecs")
                             or stamp.get("nanosec")
-                            or (time_ns % 1e9)
+                            or int(time_ns % 1e9)
                         )
                         if ROS_VERSION == "1":
                             header["stamp"] = [sec, nanosec]
                         else:
                             header["stamp"] = {"sec": sec, "nanosec": nanosec}
-                    if info.has_stamp:
+                    if has_stamp:
                         msg_type = info.msg_type_stamped
             self._data_writer.add_message(
                 msg_type, key, d_value, d["t"], data["log_stamps"]
@@ -92,10 +119,10 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
         parent = key_path.parent
         if key_path.name == "video_encoded":
             msg_type = "compressed_video"
-        elif key_path.name == "image_raw":
+        elif key_path.name in {"image_raw", "heat_map"}:
             msg_type = "image"
         elif key_path.name == "distance":
-            msg_type = "JointState"
+            msg_type = "joint_state"
         elif key_path.name == "rotation_angle":
             msg_type = "Vector3Stamped"
         else:

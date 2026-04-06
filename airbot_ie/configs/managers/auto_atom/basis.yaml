@@ -31,9 +31,7 @@ demonstrator:
     update_freq: 30
     env:
       _target_: builtins.dict
-    interests:
-      - ${objects}
-      - ${operations}
+    structured: true
 
 sampler:
   task_info:

@@ -11,8 +11,6 @@ from pydantic import BaseModel, model_validator
 class EnvConfigMixin(BaseModel):
     """A mixin class for Mujoco environment systems, providing common configuration and functionality."""
 
-    interests: Tuple[List[str], List[str]] = ()
-    """A tuple of two lists: the first list contains the names of interest objects, and the second list contains the names of interest operations."""
     env: dict = {}
 
     @model_validator(mode="before")
@@ -48,10 +46,7 @@ class BatchedMujocoEnv(System):
     interface: BatchedUnifiedMujocoEnv
 
     def on_configure(self) -> bool:
-        config = self.config
         self.env = self.interface
-        for env in self.env.envs:
-            env.set_interest_objects_and_operations(*config.interests)
         return True
 
     def capture_observation(self, timeout=None):

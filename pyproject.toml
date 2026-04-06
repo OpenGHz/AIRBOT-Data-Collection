@@ -16,7 +16,7 @@ dependencies = [
     "more-itertools",
     "typing-extensions",
     "setproctitle",
-    "mcap-data-loader ==0.2.1",
+    "mcap-data-loader ==0.2.2",
 ]
 urls = { repository = "https://github.com/OpenGHz/AIRBOT-Data-Collection" }
 
@@ -27,7 +27,7 @@ rs = ["pyrealsense2"]
 web = ["fastapi", "uvicorn"]
 v4l2 = ["linuxpy", "PyTurboJPEG"]
 udev = ["pyudev"]
-# mcap = ["mcap-data-loader ==0.2.1"]
+# mcap = ["mcap-data-loader ==0.2.2"]
 mcap_ros1 = ["mcap-ros1-support"]
 image = ["PyTurboJPEG", "av"]
 # no hardware support, such as
@@ -47,8 +47,8 @@ plt = ["ipykernel", "holoviews"]
 cfg = ["pydantic-settings", "omegaconf >=2.3.0", "hydra-zen"]
 basic = ["bidict", "tqdm", "flatten-dict"]
 all = ["airdc[basic]", "airdc[cfg]", "airdc[soft]", "airdc[hard]", "airdc[cv2]"]
-mujoco = ["mujoco >=3.4.0", "PyOpenGL_accelerate"]
 assis = ["transitions", "hydra-zen", "flatten-dict", "tqdm"]
+auto-atom = ["auto-atomic-operation[mujoco,gs] ==0.2.2"]
 
 [tool.setuptools.packages.find]
 where = ["."]
