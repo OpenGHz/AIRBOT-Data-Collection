@@ -1,12 +1,5 @@
 # @package _global_
 
-cam_width: 1280
-cam_height: 720
-enable_color: true
-enable_depth: true
-enable_mask: false
-enable_heat_map: true
-
 batch_size: 2
 
 demonstrator:
