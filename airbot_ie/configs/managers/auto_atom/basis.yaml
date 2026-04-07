@@ -25,7 +25,6 @@ objects: ${demonstrator.component.env.mask_objects}
 
 demonstrator:
   component:
-    _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
     env:
       _target_: builtins.dict
 

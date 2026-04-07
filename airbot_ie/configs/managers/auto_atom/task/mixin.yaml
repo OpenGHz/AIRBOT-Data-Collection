@@ -1,0 +1,5 @@
+# @package _global_
+
+demonstrator:
+  component:
+    _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
