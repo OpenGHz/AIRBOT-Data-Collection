@@ -13,4 +13,8 @@ genpy = ">=2022.1,<2023"
 ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 
 [pypi-dependencies]
-airdc = { path = ".", extras = ["assis,auto-atom"], editable = true }
+airdc = { path = ".", extras = ["assis"], editable = true }
+auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
+    "mujoco",
+    "gs",
+], editable = true }

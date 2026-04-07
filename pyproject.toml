@@ -48,7 +48,7 @@ cfg = ["pydantic-settings", "omegaconf >=2.3.0", "hydra-zen"]
 basic = ["bidict", "tqdm", "flatten-dict"]
 all = ["airdc[basic]", "airdc[cfg]", "airdc[soft]", "airdc[hard]", "airdc[cv2]"]
 assis = ["transitions", "hydra-zen", "flatten-dict", "tqdm"]
-auto-atom = ["auto-atomic-operation[mujoco,gs] ==0.2.2"]
+auto-atom = ["auto-atomic-operation[mujoco,gs] ==0.2.3"]
 
 [tool.setuptools.packages.find]
 where = ["."]
