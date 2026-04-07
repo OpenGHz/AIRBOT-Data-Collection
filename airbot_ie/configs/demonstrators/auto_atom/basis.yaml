@@ -7,7 +7,7 @@ demonstrator:
   # _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
     batch_size: ${batch_size}
-    # structured: true
+    structured: true
 
 log_jitter: false
 visualizer:
