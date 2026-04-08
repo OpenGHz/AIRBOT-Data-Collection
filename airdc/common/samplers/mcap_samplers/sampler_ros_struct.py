@@ -5,6 +5,7 @@ from mcap_data_loader.serialization.ros import (
     TopicInfo,
     ROS_VERSION,
     process_camera_info_dict,
+    stamp_from_dict,
 )
 from mcap_data_loader.basis.data_stamped import DictDataStamped
 from mcap_data_loader.serialization.ros.compressed_video import (
@@ -75,28 +76,15 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
                 msg_type = info.msg_type
                 has_stamp = info.has_stamp
             # print(f"Adding message: topic={key}, type={msg_type}, timestamp={d['t']}")
-            time_ns = d["t"]
             if msg_type is CompressedVideo:
-                d_value = self._coders[key].encode(d_value, timestamp_sec=time_ns / 1e9)
+                d_value = self._coders[key].encode_image_dict(d_value)
             elif msg_type is CameraInfo:
                 process_camera_info_dict(d_value)
             else:
                 header: Dict[str, dict] = d_value.get("header")
                 if header is not None:
                     if isinstance(header.get("stamp"), dict):
-                        stamp = header["stamp"]
-                        sec = (
-                            stamp.get("secs") or stamp.get("sec") or int(time_ns / 1e9)
-                        )
-                        nanosec = (
-                            stamp.get("nsecs")
-                            or stamp.get("nanosec")
-                            or int(time_ns % 1e9)
-                        )
-                        if ROS_VERSION == "1":
-                            header["stamp"] = [sec, nanosec]
-                        else:
-                            header["stamp"] = {"sec": sec, "nanosec": nanosec}
+                        header["stamp"] = stamp_from_dict(header["stamp"])
                     if has_stamp:
                         msg_type = info.msg_type_stamped
             self._data_writer.add_message(
