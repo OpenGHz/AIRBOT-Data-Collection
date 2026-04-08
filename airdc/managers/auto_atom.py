@@ -51,6 +51,7 @@ class AutoAtomManager(DemonstrateManagerBasis):
                 update_mask[i] = True
         if not (reset_mask.any() or update_mask.any()):
             return True
+        # NOTE: Do not initialize in configure, because the manager's configure takes precedence over the demonstrator. That is, the runner will configure before the environment, which will cause the environment to not be found and result in an error.
         if self._runner is None:
             self._runner = TaskRunner().from_config(self.config)
         runner = self._runner
