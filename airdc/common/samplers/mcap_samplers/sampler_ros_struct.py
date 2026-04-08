@@ -121,10 +121,10 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
             msg_type = "compressed_video"
         elif key_path.name in {"image_raw", "heat_map"}:
             msg_type = "image"
-        elif key_path.name == "distance":
-            msg_type = "joint_state"
         elif key_path.name == "rotation_angle":
             msg_type = "Vector3Stamped"
+        elif key_path.name == "points":
+            msg_type = "PointCloud2"
         else:
             msg_type = None
         if msg_type is not None:
