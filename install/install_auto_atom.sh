@@ -1,6 +1,6 @@
 set -ex
 
-AAO_VERSION="0.2.5"
+AAO_VERSION="0.2.6"
 AAO_DIR="third_party/auto-atomic-operation"
 
 mkdir -p third_party
