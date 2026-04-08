@@ -39,13 +39,22 @@ def collect_source_files(root: Path) -> list[Path]:
 
     source_files: list[Path] = []
     for subdir in sorted(p for p in root.iterdir() if p.is_dir()):
-        files = sorted(p for p in subdir.iterdir() if p.is_file())
+        # Recursively collect files from all levels, sorted by path for determinism
+        files = sorted(p for p in subdir.rglob("*") if p.is_file())
         source_files.extend(files)
     return source_files
 
 
 def collect_source_dirs(root: Path) -> list[Path]:
-    return sorted(p for p in root.iterdir() if p.is_dir())
+    """Collect all subdirectories under root, deepest first for safe bottom-up removal."""
+    all_dirs: list[Path] = []
+    for top_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+        # Walk bottom-up: deeper dirs come first so they can be removed before parents
+        for d in sorted(top_dir.rglob("*"), reverse=True):
+            if d.is_dir():
+                all_dirs.append(d)
+        all_dirs.append(top_dir)
+    return all_dirs
 
 
 def build_plan(source_files: list[Path], root: Path, start_index: int) -> list[tuple[Path, Path]]:
@@ -76,10 +85,17 @@ def execute_plan(plan: list[tuple[Path, Path]], source_dirs: list[Path], dry_run
     if dry_run:
         planned_sources = {src for src, _ in plan}
         print(f"[DRY-RUN] total files: {len(plan)}")
+        # source_dirs is already ordered deepest-first for bottom-up removal
+        simulated_empty: set[Path] = set()
         for subdir in source_dirs:
             entries = list(subdir.iterdir())
-            will_be_empty = all(entry.is_file() and entry in planned_sources for entry in entries)
+            will_be_empty = all(
+                (entry.is_file() and entry in planned_sources)
+                or (entry.is_dir() and entry in simulated_empty)
+                for entry in entries
+            )
             if will_be_empty:
+                simulated_empty.add(subdir)
                 print(f"[DRY-RUN] remove empty dir: {subdir}")
         return
 
@@ -87,8 +103,9 @@ def execute_plan(plan: list[tuple[Path, Path]], source_dirs: list[Path], dry_run
         shutil.move(str(temp_src), str(final_dst))
 
     removed_count = 0
+    # source_dirs is already ordered deepest-first for safe bottom-up removal
     for subdir in source_dirs:
-        if not any(subdir.iterdir()):
+        if subdir.exists() and not any(subdir.iterdir()):
             subdir.rmdir()
             removed_count += 1
 
