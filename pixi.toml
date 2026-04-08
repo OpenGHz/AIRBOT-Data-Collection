@@ -11,6 +11,9 @@ version = "0.1.0"
 ros-jazzy-ros-core = ">=0.11.0,<0.12"
 genpy = ">=2022.1,<2023"
 ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
+# opencv = ">=4.5.0,<5"
+# ros-jazzy-cv-bridge = ">=4.1.0,<5"
+# matplotlib = ">=3.10.8,<4"
 
 [pypi-dependencies]
 airdc = { path = ".", extras = ["assis"], editable = true }
@@ -18,3 +21,4 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
     "mujoco",
     "gs",
 ], editable = true }
+# mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
