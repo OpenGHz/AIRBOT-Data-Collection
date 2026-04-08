@@ -19,6 +19,8 @@ sampler:
   task_info:
     operator: auto_atom
     station: mujoco
+  writer:
+    chunk_size: 1024 * 1024 * 16
 
 sample_limit:
   size: 200

@@ -5,12 +5,14 @@ from functools import cache
 from mcap_data_loader.utils.av_coder import AvCoderConfig
 from mcap_data_loader.utils.mcap_utils import MediaType
 from mcap_data_loader.serialization.flb import McapFlatBuffersWriter, FlatBuffersSchemas
-from airdc.common.samplers.basis import DataSamplerConfig
-from airdc.common.samplers.mcap_samplers.basis import McapDataSamplerBasis
+from airdc.common.samplers.mcap_samplers.basis import (
+    McapDataSamplerBasis,
+    McapDataSamplerBasisConfig,
+)
 from airdc.common.samplers.video_sampler import VideoSampler, VideoSamplerConfig
 
 
-class McapFlbDataSamplerConfig(DataSamplerConfig):
+class McapFlbDataSamplerConfig(McapDataSamplerBasisConfig):
     """Configuration for MCAP data sampler."""
 
     initial_builder_size: PositiveInt = 1024 * 1024  # 1 MB

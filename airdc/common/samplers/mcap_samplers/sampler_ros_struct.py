@@ -1,5 +1,7 @@
-from airdc.common.samplers.mcap_samplers.basis import McapDataSamplerBasis
-from airdc.common.samplers.basis import DataSamplerConfig
+from airdc.common.samplers.mcap_samplers.basis import (
+    McapDataSamplerBasis,
+    McapDataSamplerBasisConfig,
+)
 from mcap_data_loader.serialization.ros.mcap import McapROSWriter
 from mcap_data_loader.serialization.ros import (
     TopicInfo,
@@ -22,7 +24,7 @@ from collections import defaultdict
 from pydantic import Field
 
 
-class McapDataSamplerROSStructConfig(DataSamplerConfig):
+class McapDataSamplerROSStructConfig(McapDataSamplerBasisConfig):
     """Configuration for McapDataSamplerROSStruct."""
 
     compressed_video: CompressedVideoEncoderConfig = Field(

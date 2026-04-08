@@ -1,6 +1,6 @@
 import json
 from typing import Tuple, Dict
-from mcap.writer import Writer
+from mcap.writer import Writer, CompressionType, IndexType
 from pathlib import Path
 from abc import abstractmethod
 from flatten_dict import flatten
@@ -10,12 +10,53 @@ from mcap_data_loader.serialization.basis import McapWriterBasis
 from airdc.common.samplers.basis import DataSampler
 from airdc.common.samplers.basis import DataSamplerConfig
 from time import time_ns
+from pydantic import BaseModel, PositiveInt, field_validator
+
+
+class McapWriterConfig(BaseModel):
+    """Configuration for the MCAP writer."""
+
+    chunk_size: PositiveInt = 1024 * 1024  # 1 MB
+    """The maximum size of individual data chunks in a chunked file."""
+    compression: CompressionType = CompressionType.ZSTD
+    """Compression to apply to chunk data, if any."""
+    index_types: IndexType = IndexType.ALL
+    """Indexes to write to the file. See IndexType for possibilities."""
+    repeat_channels: bool = True
+    """Repeat channel information at the end of the file."""
+    repeat_schemas: bool = True
+    """Repeat schemas at the end of the file."""
+    use_chunking: bool = True
+    """Group data in chunks."""
+    use_statistics: bool = True
+    """Write statistics record."""
+    use_summary_offsets: bool = True
+    """Write summary offset records."""
+    enable_crcs: bool = True
+    """Enable CRCs for data integrity."""
+    enable_data_crcs: bool = False
+    """Enable CRCs for data integrity on individual data records."""
+
+    @field_validator("chunk_size", mode="before")
+    def validate_chunk_size(cls, value):
+        if isinstance(value, str):
+            return eval(value)
+        return value
+
+
+class McapDataSamplerBasisConfig(DataSamplerConfig):
+    """Basic configuration for MCAP data sampler."""
+
+    writer: McapWriterConfig = McapWriterConfig()
 
 
 class McapDataSamplerBasis(DataSampler):
     """McapDataSamplerBasis is an abstract base class for MCAP data samplers, defining the interface for creating a MCAP writer."""
 
     _info: Dict[str, Dict[str, str]]
+
+    def __init__(self, config: McapDataSamplerBasisConfig):
+        self.config = config
 
     def on_configure(self):
         """Configure the mcap data sampler."""
@@ -27,7 +68,7 @@ class McapDataSamplerBasis(DataSampler):
         """Create a custom MCAP writer based on the provided configuration."""
 
     def _create_mcap_writer(self, path: Path) -> Tuple[Writer, bool]:
-        return Writer(str(path)), True
+        return Writer(str(path), **self.config.writer.model_dump()), True
 
     def on_compose_path(self, directory: Path, episode: int) -> Path:
         path = Path(directory) / f"{episode}.mcap"
