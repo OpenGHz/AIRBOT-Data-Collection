@@ -71,24 +71,17 @@ class McapDataSamplerROSStruct(McapDataSamplerBasis):
                         if isinstance(d_value, list)
                         else d_value.tolist()
                     }
-                has_stamp = False
                 msg_type = Float32MultiArray
                 # raise ValueError(f"Cannot determine message type for key: {key}")
             else:
-                msg_type = info.msg_type
-                has_stamp = info.has_stamp
+                msg_type = (
+                    info.msg_type if not info.has_stamp else info.msg_type_stamped
+                )
             # print(f"Adding message: topic={key}, type={msg_type}, timestamp={d['t']}")
             if msg_type is CompressedVideo:
                 d_value = self._coders[key].encode_image_dict(d_value)
             elif msg_type is CameraInfo:
                 process_camera_info_dict(d_value)
-            else:
-                header: Dict[str, dict] = d_value.get("header")
-                if header is not None:
-                    if isinstance(header.get("stamp"), dict):
-                        header["stamp"] = stamp_from_dict(header["stamp"])
-                    if has_stamp:
-                        msg_type = info.msg_type_stamped
             self._data_writer.add_message(
                 msg_type, key, d_value, d["t"], data["log_stamps"]
             )
