@@ -3,8 +3,7 @@ from auto_atom.basis.mjc.mujoco_env import (
     BatchedUnifiedMujocoEnv,
     EnvConfig,
 )
-from airdc.common.systems.basis import System, SystemMode
-from typing import Tuple, List
+from airdc.common.systems.basis import System
 from pydantic import BaseModel, model_validator
 
 
@@ -51,7 +50,6 @@ class BatchedMujocoEnv(System):
 
     def capture_observation(self, timeout=None):
         data = self.env.capture_observation()
-        self.env.update()
         data["skip"] = ~self.env.is_updated()
         return data
 

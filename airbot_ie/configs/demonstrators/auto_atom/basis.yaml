@@ -23,7 +23,7 @@ sampler:
     chunk_size: 1024 * 1024 * 16
 
 sample_limit:
-  size: 200
+  size: 300
   # end_round: 300
   rounds: 1
 
