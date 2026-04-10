@@ -176,10 +176,16 @@ class DataSampler(ConfigurableBasis):
             self.remove(self._path)
 
 
+class MockDataSamplerConfig(DataSamplerConfig):
+    """Mock data sampler config for testing purpose."""
+
+    model_config = ConfigDict(extra="allow")
+
+
 class MockDataSampler(DataSampler):
     """Mock data sampler for testing purpose."""
 
-    config: None
+    config: MockDataSamplerConfig
 
     def on_configure(self):
         return True
