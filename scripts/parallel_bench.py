@@ -2,8 +2,9 @@
 """Run multiple airdc processes in parallel and report Average update freq.
 
 Usage:
-    python parallel_bench.py -n 4
-    python parallel_bench.py -n 8 --command "airdc --name aao_config dataset.directory=aao_data/door managers/auto_atom/task=cup_on_coaster_gs batch_size=1 samplers=mock"
+    python parallel_bench.py -n 4 --gpus 0,1
+    python parallel_bench.py -n 8 --gpus 0,1,2,3
+    python parallel_bench.py -n 6 --gpus 2,3  # 3 workers on GPU 2, 3 workers on GPU 3
 
 Press Ctrl+C to stop all workers. Each worker will print its summary
 (including Average update freq) before exiting. The script then extracts
@@ -47,6 +48,14 @@ def parse_args() -> argparse.Namespace:
         help="Number of parallel airdc processes to launch.",
     )
     parser.add_argument(
+        "--gpus",
+        type=str,
+        default=None,
+        help="Comma-separated GPU IDs to distribute workers across, e.g. '0,1,2'. "
+             "Workers are assigned round-robin. If not set, inherits the current "
+             "CUDA_VISIBLE_DEVICES environment variable.",
+    )
+    parser.add_argument(
         "--command",
         type=str,
         default=DEFAULT_COMMAND,
@@ -76,8 +85,18 @@ def main() -> int:
     log_dir = Path(args.output_dir) / f"n{n}_{run_id}"
     log_dir.mkdir(parents=True, exist_ok=True)
 
+    # Parse GPU list
+    gpu_ids: list[str] | None = None
+    if args.gpus is not None:
+        gpu_ids = [g.strip() for g in args.gpus.split(",") if g.strip()]
+        if not gpu_ids:
+            print("Error: --gpus requires at least one GPU ID.", file=sys.stderr)
+            return 1
+
     print(f"Launching {n} workers...")
     print(f"Command: {args.command}")
+    if gpu_ids:
+        print(f"GPUs:    {','.join(gpu_ids)} ({len(gpu_ids)} devices, round-robin)")
     print(f"Logs:    {log_dir.resolve()}")
     print("Press Ctrl+C to stop all workers.\n")
 
@@ -86,17 +105,25 @@ def main() -> int:
     for i in range(n):
         log_path = log_dir / f"worker_{i}.log"
         log_file = log_path.open("w", encoding="utf-8")
+
+        env = os.environ.copy()
+        if gpu_ids:
+            assigned_gpu = gpu_ids[i % len(gpu_ids)]
+            env["CUDA_VISIBLE_DEVICES"] = assigned_gpu
+        else:
+            assigned_gpu = env.get("CUDA_VISIBLE_DEVICES", "all")
+
         proc = subprocess.Popen(
             cmd_tokens,
             stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
-            # Let children receive SIGINT from the terminal as well,
-            # but we also send it explicitly to be safe.
+            env=env,
+            # Isolate children from terminal SIGINT; we send it explicitly.
             preexec_fn=os.setpgrp,
         )
-        workers.append({"proc": proc, "log_file": log_file, "log_path": log_path, "id": i})
-        print(f"  Worker {i}: PID {proc.pid}")
+        workers.append({"proc": proc, "log_file": log_file, "log_path": log_path, "id": i, "gpu": assigned_gpu})
+        print(f"  Worker {i}: PID {proc.pid}, GPU {assigned_gpu}")
 
     print()
 
@@ -168,9 +195,9 @@ def main() -> int:
         if match:
             freq = float(match.group(1))
             freqs.append(freq)
-            print(f"  Worker {w['id']}: {freq:.4f} Hz")
+            print(f"  Worker {w['id']} (GPU {w['gpu']}): {freq:.4f} Hz")
         else:
-            print(f"  Worker {w['id']}: <no frequency found>")
+            print(f"  Worker {w['id']} (GPU {w['gpu']}): <no frequency found>")
 
     print()
     if not freqs:
