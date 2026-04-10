@@ -6,6 +6,7 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
+download-gs = "hf download OpenGHz/auto-atom-assets --repo-type=dataset --include 'assets/gs/*' --local-dir third_party/auto-atomic-operation"
 
 [dependencies]
 ros-jazzy-ros-core = ">=0.11.0,<0.12"
