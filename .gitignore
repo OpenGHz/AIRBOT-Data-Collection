@@ -24,3 +24,4 @@ claude.md
 .pixi/*
 !.pixi/config.toml
 .cache/
+*.TXT
