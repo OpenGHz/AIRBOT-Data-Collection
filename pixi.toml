@@ -13,6 +13,7 @@ ros-jazzy-ros-core = ">=0.11.0,<0.12"
 genpy = ">=2022.1,<2023"
 ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 huggingface_hub = "*"
+hydra-joblib-launcher = "*"
 
 # opencv = ">=4.5.0,<5"
 # ros-jazzy-cv-bridge = ">=4.1.0,<5"

@@ -5,6 +5,7 @@ defaults:
   - samplers: ros_struct
   - _self_
   - override hydra/job_logging: custom
+  - override hydra/launcher: joblib  # or `add hydra/launcher=joblib` to the command line
 
 visualizer: null
 
