@@ -3,3 +3,8 @@
 managers:
   auto_atom:
     _target_: airbot_ie.managers.auto_atom.DiscoverAutoAtomDataReplayManager
+    max_episodes: 1
+    redis_cfg:
+      host: localhost
+      port: 6379
+      message_buffer: true

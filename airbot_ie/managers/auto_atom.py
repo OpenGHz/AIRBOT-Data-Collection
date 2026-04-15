@@ -5,13 +5,15 @@ from airdc.managers.auto_atom import (
     AutoAtomDataReplayManager,
     DAction,
 )
-from pydantic import BaseModel, NonNegativeInt
+from pydantic import BaseModel, NonNegativeInt, ConfigDict
 from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError
 from pathlib import Path
 
 
 class RedisConfig(BaseModel, frozen=True):
     """Configuration for Redis connection."""
+
+    model_config = ConfigDict(extra="forbid")
 
     host: str = "localhost"
     """Redis host address (default: localhost)"""
@@ -28,8 +30,8 @@ class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
 
     redis_cfg: RedisConfig = RedisConfig()
     """Redis connection configuration"""
-    max_episodes: NonNegativeInt = 2
-    """Maximum number of episodes to save before waiting for new data (default: 2)"""
+    max_episodes: NonNegativeInt = 0
+    """Maximum number of episodes to save before waiting for new data (default: 0, meaning no limit)"""
 
 
 class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
@@ -94,7 +96,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         return file_path
 
     def update(self):
-        if self._total_saved >= self.config.max_episodes:
+        max_episodes = self.config.max_episodes
+        if max_episodes and self._total_saved >= max_episodes:
             self.get_logger().info(
                 f"Total saved demonstrations: {self._total_saved}. Waiting for next data..."
             )
