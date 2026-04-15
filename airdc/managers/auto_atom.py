@@ -61,13 +61,19 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
             return True
         runner = self._runner
         runner.reset(reset_mask)
+        # 对需要更新的runner执行一步更新，返回各runner的完成和成功状态
         update_result = runner.update(update_mask)
+        # 将完成状态转为布尔掩码，标记哪些runner已结束
         done_mask = np.asarray(update_result.done, dtype=bool)
+        # 筛选出本轮新完成的runner：需要同时满足被更新、已完成、且尚未处理过
         new_done_mask = update_mask & done_mask & ~self._runner_done_handled
+        # 在新完成的runner中，进一步筛选出成功的runner
         success_mask = new_done_mask & np.asarray(update_result.success, dtype=bool)
-        fail_mask = new_done_mask & ~np.asarray(update_result.success, dtype=bool)
+        # 获取本轮新完成的runner索引
         done_ids = np.where(new_done_mask)[0]
+        # 获取成功的runner索引（这里判定成功的前提是要先done）
         success_ids = np.where(success_mask)[0]
+        # 从新完成的runner中去掉成功的，剩下的即为失败的runner索引
         fail_ids = np.setdiff1d(done_ids, success_ids)
         for i in success_ids:
             fsms[int(i)].act(DAction.save)
