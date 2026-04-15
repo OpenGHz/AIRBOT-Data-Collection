@@ -8,6 +8,7 @@ defaults:
 
 visualizer: null
 
-demonstrator:
-  component:
-    viewer: null
+managers:
+  auto_atom:
+    env:
+      viewer: null

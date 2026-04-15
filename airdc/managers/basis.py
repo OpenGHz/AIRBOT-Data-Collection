@@ -86,7 +86,8 @@ class DemonstrateManager(Protocol):
 class DemonstrateManagerBasis(ConfigurableBasis):
     """Demonstrate manager for managing the demonstration."""
 
-    config: ManagerConfigBasis
+    def __init__(self, config: ManagerConfigBasis):
+        self.config = config
 
     @final
     def config_post_init(self):

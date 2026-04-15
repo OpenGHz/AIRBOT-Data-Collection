@@ -6,8 +6,8 @@ demonstrator:
   _target_: airdc.common.demonstrators.single.SingleBatchedComponentDemonstrator
   # _target_: airdc.common.demonstrators.single.SingleComponentDemonstrator
   component:
-    batch_size: ${batch_size}
-    structured: true
+    _target_: airdc.common.systems.mujoco_env.BatchedMujocoEnv
+    name: ${task_name}
 
 log_jitter: false
 visualizer:

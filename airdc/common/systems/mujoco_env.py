@@ -1,51 +1,23 @@
-from auto_atom.basis.mjc.mujoco_env import (
-    UnifiedMujocoEnv,
-    BatchedUnifiedMujocoEnv,
-    EnvConfig,
-)
+from auto_atom.basis.mjc.mujoco_env import BatchedUnifiedMujocoEnv
+from auto_atom.runtime import ComponentRegistry
 from airdc.common.systems.basis import System
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 
-class EnvConfigMixin(BaseModel):
-    """A mixin class for Mujoco environment systems, providing common configuration and functionality."""
-
-    env: dict = {}
-
-    @model_validator(mode="before")
-    def merge_env_config(cls, values: dict):
-        env = values.pop("env", {})
-        # from pprint import pprint
-
-        if env:
-            # print("env:")
-            # pprint(env)
-            from omegaconf import OmegaConf
-
-            fields = EnvConfigMixin.model_fields.keys() | EnvConfig.model_fields.keys()
-            for key in list(values.keys()):
-                if key not in fields:
-                    values.pop(key)
-            # pprint("values before merge:")
-            # pprint(values)
-            values = OmegaConf.to_object(OmegaConf.merge(env, values))
-        # print("values after merge:")
-        # pprint(values)
-        return values
-
-
-class MujocoEnvConfig(EnvConfig, EnvConfigMixin):
+class MujocoEnvConfig(BaseModel):
     """Configuration for the Mujoco environment system."""
+
+    name: str
+    """The name of the registered Mujoco environment to load."""
 
 
 class BatchedMujocoEnv(System):
     """A system that interfaces with a Mujoco environment."""
 
     config: MujocoEnvConfig
-    interface: BatchedUnifiedMujocoEnv
 
     def on_configure(self) -> bool:
-        self.env = self.interface
+        self.env: BatchedUnifiedMujocoEnv = ComponentRegistry.get_env(self.config.name)
         return True
 
     def capture_observation(self, timeout=None):

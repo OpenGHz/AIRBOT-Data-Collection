@@ -31,34 +31,39 @@ def main() -> int:
         batch_size = config.batch_size
         fsm_cnt = 0
         raw_directory = config.dataset.directory
+        # NOTE: Currently, pydantic's model_copy update is always performed after the copy is complete. Therefore, it is not possible to avoid copying issues by clearing fields in the update. The only solution is to manually clear them beforehand.
+        managers = config.managers.copy()
+        config.managers.clear()
 
         def create_fsm():
-            nonlocal fsm_cnt, config
+            nonlocal fsm_cnt
             fsm_cnt += 1
             # NOTE: if there are multiple FSMs, we only keep the visualizer for the first one to avoid duplicated visualization
             if batch_size > 0 and fsm_cnt == 1:
                 object.__setattr__(config.dataset, "directory", f"{raw_directory}_0")
             if fsm_cnt > 1:
-                # TODO: may not use deep copy here?
-
-                config = config.model_copy(
+                config_copy = config.model_copy(
                     update={
                         "visualizer": None,
                         "dataset": config.dataset.model_copy(
                             update={"directory": raw_directory + f"_{fsm_cnt - 1}"},
                             deep=True,
                         ),
+                        "managers": {},
                     },
                     deep=True,
                 )
+            else:
+                config_copy = config
             return DemonstrateFSM(
-                DemonstrateFSMConfig(state_machine=config.fsm, interface=config)
+                DemonstrateFSMConfig(
+                    state_machine=config_copy.fsm, interface=config_copy
+                )
             )
 
         logger.info(f"Creating {batch_size} FSMs.")
         fsms = [create_fsm() for _ in range(batch_size or 1)]
 
-        managers = config.managers
         for name, manager in managers.items():
             manager.set_fsms(fsms)
             if not manager.configure():

@@ -1,0 +1,5 @@
+# @package _global_
+
+managers:
+  auto_atom:
+    _target_: airdc.managers.auto_atom.AutoAtomManager

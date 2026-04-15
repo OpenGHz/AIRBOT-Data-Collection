@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - mixin
+  - _self_
+
+robot_gs_dir: ${managers.auto_atom.robot_gs_dir}
+model_name: demo_gs_airbot_play
+door_name: door0
+bg3dgs_name: bg0

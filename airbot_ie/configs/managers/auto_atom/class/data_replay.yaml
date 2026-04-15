@@ -1,0 +1,5 @@
+# @package _global_
+
+managers:
+  auto_atom:
+    _target_: airbot_ie.managers.auto_atom.DiscoverAutoAtomDataReplayManager

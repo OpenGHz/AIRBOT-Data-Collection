@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from typing import ClassVar, Optional, Type
-
 from airdc.managers.basis import (
     DemonstrateManagerBasis,
     State,
@@ -27,8 +24,9 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
     runner_cls: ClassVar[Optional[Type[RunnerBase]]] = None
 
     def on_configure(self):
-        self._runner = None
+        self._runner = self.runner_cls().from_config(self.config)
         self._runner_done_handled = np.zeros(len(self.fsms), dtype=bool)
+        self._total_saved = 0
         return True
 
     def update(self) -> bool:
@@ -61,9 +59,6 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
                 update_mask[i] = True
         if not (reset_mask.any() or update_mask.any()):
             return True
-        # NOTE: Do not initialize in configure, because the manager's configure takes precedence over the demonstrator. That is, the runner will configure before the environment, which will cause the environment to not be found and result in an error.
-        if self._runner is None:
-            self._runner = self.runner_cls().from_config(self.config)
         runner = self._runner
         runner.reset(reset_mask)
         update_result = runner.update(update_mask)
@@ -76,6 +71,7 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
         fail_ids = np.setdiff1d(done_ids, success_ids)
         for i in success_ids:
             fsms[int(i)].act(DAction.save)
+        self._total_saved += len(success_ids)
         for i in fail_ids:
             fsms[int(i)].act(DAction.abandon)
         self._runner_done_handled[new_done_mask] = True
@@ -97,5 +93,8 @@ class AutoAtomManager(AutoAtomManagerBasis):
 class AutoAtomDataReplayManager(AutoAtomManagerBasis):
     """Manager for replaying the demonstration data"""
 
-    config: AutoAtomDataReplayConfig
     runner_cls = DataReplayRunner
+
+    def __init__(self, config: AutoAtomDataReplayConfig):
+        self._runner: DataReplayRunner
+        self.config = config
