@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "airdc"
-version = "0.7.3"
+version = "0.7.4"
 description = "AIRDC: Collecting Multimodal Data For Your Robots"
 authors = [{ name = "OpenGHz", email = "latent-shimmer@qq.com" }]
 readme = "README.md"
