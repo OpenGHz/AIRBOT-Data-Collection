@@ -1,6 +1,6 @@
 # LeRobot Sampler 说明（LeRobotDataSampler）
 
-本文档说明 [airdc/airdc/common/samplers/lerobot_sampler.py](../../../airdc/common/samplers/lerobot_sampler.py) 中 `LeRobotDataSampler` / `LeRobotDataSamplerConfig` 的设计目标、运行时调用顺序，以及每个方法的实现逻辑。
+本文档说明 [airdc/common/samplers/lerobot_sampler.py](../../../../airdc/common/samplers/lerobot_sampler.py) 中 `LeRobotDataSampler` / `LeRobotDataSamplerConfig` 的设计目标、运行时调用顺序，以及每个方法的实现逻辑。
 
 > 适用场景
 >
@@ -146,7 +146,7 @@ LeRobot 的 `lerobot_record.py` 把“图像采集”和“图像写盘”拆成
 
 ## 5. 基于测试 payload 的推荐映射示例
 
-参考 [airdc/tests/modules/samplers/lerobot_sampler.yaml](../../../tests/modules/samplers/lerobot_sampler.yaml)。
+参考 [tests/modules/samplers/lerobot_sampler.yaml](../../../../tests/modules/samplers/lerobot_sampler.yaml)。
 
 该示例基于 `tests/modules/test_sampler.py` 的 payload：
 
