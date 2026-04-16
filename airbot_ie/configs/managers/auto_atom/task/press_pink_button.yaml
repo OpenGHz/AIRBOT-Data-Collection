@@ -3,3 +3,5 @@
 defaults:
   - gs_mixin
   - _self_
+
+object_name: button_pink
