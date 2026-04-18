@@ -33,8 +33,19 @@ sampler:
 hydra:
   sweeper:
     params:
-      door_name: door1
-      bg3dgs_name: bg0,bg1
+      door_name: door0,door1
+  job:
+    env_set:
+      # set environment variables for Graphics Library
+      CUDA_VISIBLE_DEVICES: ${hydra:job.num}
+      EGL_VISIBLE_DEVICES: ${hydra:job.num}
+      MUJOCO_EGL_DEVICE_ID: ${hydra:job.num}
+      EGL_PLATFORM: egl
+      MUJOCO_GL: egl
+      PYOPENGL_PLATFORM: egl
+      __EGL_VENDOR_LIBRARY_FILENAMES: /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+      LD_PRELOAD: /usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0
+      NVIDIA_DRIVER_CAPABILITIES: all
 
 cam_width: 320
 cam_height: 240

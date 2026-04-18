@@ -18,7 +18,9 @@ managers:
       batch_size: ${batch_size}
       structured: true
 
+bg3dgs_dir: ${managers.auto_atom.bg3dgs_dir}
 bg3dgs_name: ${managers.auto_atom.bg3dgs_name}
+
 model_name: ${managers.auto_atom.model_name}
 scene_name: ${managers.auto_atom.scene_name}
 task_name: ${managers.auto_atom.task_name}
