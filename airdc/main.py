@@ -39,13 +39,21 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
         fsm_cnt += 1
         # NOTE: if there are multiple FSMs, we only keep the visualizer for the first one to avoid duplicated visualization
         if batch_size > 0 and fsm_cnt == 1:
-            object.__setattr__(config.dataset, "directory", f"{raw_directory}_0")
+            new_dir = raw_directory
+            if job_id is not None:
+                new_dir += f"_{job_id}"
+            new_dir += "_0"
+            object.__setattr__(config.dataset, "directory", new_dir)
         if fsm_cnt > 1:
+            new_dir = raw_directory
+            if job_id is not None:
+                new_dir += f"_{job_id}"
+            new_dir += f"_{fsm_cnt - 1}"
             config_copy = config.model_copy(
                 update={
                     "visualizer": None,
                     "dataset": config.dataset.model_copy(
-                        update={"directory": raw_directory + f"_{fsm_cnt - 1}"},
+                        update={"directory": new_dir},
                         deep=True,
                     ),
                     "managers": {},

@@ -6,3 +6,14 @@ dataset:
 
 sampler:
   _target_: airdc.common.samplers.mcap_samplers.sampler_ros_struct.McapDataSamplerROSStruct
+  av_coder:
+    frame_format: rgb24
+  task_info:
+    operator: auto_atom
+    station: mujoco
+    task_name: ${task_name}
+    scene: demo # change field name to background?
+    skill: ${operations}
+    object: ${objects}
+  writer:
+    chunk_size: 1024 * 1024 * 16

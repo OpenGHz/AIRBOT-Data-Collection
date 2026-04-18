@@ -60,7 +60,10 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
         if not (reset_mask.any() or update_mask.any()):
             return True
         runner = self._runner
-        runner.reset(reset_mask)
+        if reset_mask.any():
+            runner.reset(reset_mask)
+        if not update_mask.any():
+            return True
         # 对需要更新的runner执行一步更新，返回各runner的完成和成功状态
         update_result = runner.update(update_mask)
         # 将完成状态转为布尔掩码，标记哪些runner已结束

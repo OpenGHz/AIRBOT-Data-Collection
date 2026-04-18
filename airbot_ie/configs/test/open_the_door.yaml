@@ -1,0 +1,27 @@
+# @package _global_
+
+defaults:
+  - override /managers/auto_atom/task: open_door_airbot_play_back_gs
+  - override /managers/auto_atom/class: data_replay
+  - override /samplers: video
+  - _self_
+
+dataset:
+  directory: aao_data/door
+
+batch_size: 1
+
+managers:
+  auto_atom:
+    env:
+      structured: false
+
+sampler:
+  av_coder:
+    frame_format: rgb24
+
+hydra:
+  sweeper:
+    params:
+      door_name: door1
+      bg3dgs_name: bg0,bg1

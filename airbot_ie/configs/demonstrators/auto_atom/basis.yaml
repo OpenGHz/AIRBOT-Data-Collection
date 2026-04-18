@@ -13,15 +13,6 @@ log_jitter: false
 visualizer:
   swap_rgb_bgr: true
 
-sampler:
-  av_coder:
-    frame_format: rgb24
-  task_info:
-    operator: auto_atom
-    station: mujoco
-  writer:
-    chunk_size: 1024 * 1024 * 16
-
 sample_limit:
   size: 300
   # end_round: 300

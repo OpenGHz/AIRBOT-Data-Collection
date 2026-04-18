@@ -24,10 +24,3 @@ scene_name: ${managers.auto_atom.scene_name}
 task_name: ${managers.auto_atom.task_name}
 operations: ${managers.auto_atom.env.operations}
 objects: ${managers.auto_atom.env.mask_objects}
-
-sampler:
-  task_info:
-    task_name: ${task_name}
-    scene: demo # change field name to background?
-    skill: ${operations}
-    object: ${objects}
