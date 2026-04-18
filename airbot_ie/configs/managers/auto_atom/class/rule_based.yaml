@@ -3,3 +3,8 @@
 managers:
   auto_atom:
     _target_: airdc.managers.auto_atom.AutoAtomManager
+
+sample_limit:
+  size: 300
+  # end_round: 300
+  rounds: 1

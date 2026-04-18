@@ -13,10 +13,5 @@ log_jitter: false
 visualizer:
   swap_rgb_bgr: true
 
-sample_limit:
-  size: 300
-  # end_round: 300
-  rounds: 1
-
 # update as fast as possible for simulation since the actual update rate is determined by the simulation frequency
 update_rate: 1000

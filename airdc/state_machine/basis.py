@@ -246,7 +246,7 @@ class StateMachineBasis:
         else:
             return value.__name__
 
-    def get_state(self) -> str:
+    def get_state(self) -> Union[str, Enum]:
         return self.state
 
     def act(self, action: Action) -> bool:
