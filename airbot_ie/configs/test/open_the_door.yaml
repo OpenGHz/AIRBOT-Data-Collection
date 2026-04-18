@@ -24,7 +24,8 @@ managers:
           enable_mask: ${enable_mask}
           enable_heat_map: ${enable_heat_map}
           is_static: true
-
+      enabled_sensors:
+        - camera
 sampler:
   av_coder:
     frame_format: rgb24

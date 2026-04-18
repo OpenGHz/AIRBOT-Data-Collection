@@ -14,6 +14,7 @@ genpy = ">=2022.1,<2023"
 ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 huggingface_hub = "*"
 hydra-joblib-launcher = "*"
+redis = "*"
 
 # opencv = ">=4.5.0,<5"
 # ros-jazzy-cv-bridge = ">=4.1.0,<5"
@@ -26,4 +27,4 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
     "mujoco",
     "gs",
 ], editable = true }
-# mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
+mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
