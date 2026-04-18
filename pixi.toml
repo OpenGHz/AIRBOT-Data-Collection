@@ -26,5 +26,5 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
     "mujoco",
     "gs",
 ], editable = true }
-mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
+# mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
 redis = "*"
