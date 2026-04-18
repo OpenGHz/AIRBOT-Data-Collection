@@ -6,7 +6,7 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
-download-gs = "hf download OpenGHz/auto-atom-assets --repo-type=dataset --include 'assets/gs/*' --local-dir third_party/auto-atomic-operation"
+download-gs = "hf download OpenGHz/auto-atom-assets --repo-type=dataset --include 'assets/gs/*' --local-dir third_party/auto-atomic-operation/"
 
 [dependencies]
 ros-jazzy-ros-core = ">=0.11.0,<0.12"
@@ -14,7 +14,6 @@ genpy = ">=2022.1,<2023"
 ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 huggingface_hub = "*"
 hydra-joblib-launcher = "*"
-redis = "*"
 
 # opencv = ">=4.5.0,<5"
 # ros-jazzy-cv-bridge = ">=4.1.0,<5"
@@ -28,3 +27,4 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
     "gs",
 ], editable = true }
 mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
+redis = "*"
