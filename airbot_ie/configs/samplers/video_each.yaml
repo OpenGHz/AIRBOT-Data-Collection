@@ -5,9 +5,10 @@ update_rate: 5
 sampler:
   _target_: airdc.common.samplers.video_sampler.VideoSamplerEach
   remove_mode: trash
-  # av_coder:
-  #   non_monotonic_mode: drop
-  #   non_monotonic_log: false
+  # encoder:
+  #   cfg:
+  #     non_monotonic_mode: drop
+  #     non_monotonic_log: false
   # key_remap:
   #   _target_: mcap_data_loader.utils.key.unique_count
   #   prefix: port_

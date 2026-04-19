@@ -1,16 +1,30 @@
-from mcap_data_loader.utils.av_coder import AvCoder, AvCoderConfig
+from mcap_data_loader.serialization.video.basis import AvCoderBasis, AvCoderConfig
 from airdc.common.samplers.basis import DataSampler, DataSamplerConfigBasis
-from typing import Dict
+from typing import Dict, Any, Type
 from collections import defaultdict
 from functools import cache
 from pathlib import Path
+from pydantic import BaseModel, ImportString, ConfigDict
 import csv
+
+
+class VideoEncoderConfig(BaseModel, frozen=True):
+    """Configuration for the video coder."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    cfg: Dict[str, Any] = {}
+    """Configuration dictionary for the video coder. The specific keys depend on the implementation of the coder."""
+    cls: ImportString[Type[AvCoderBasis]] = (
+        "mcap_data_loader.serialization.video.pyav.AvCoder"
+    )
+    """Import string for the video coder class. Must be a subclass of AvCoderBasis. Default is a PyAV-based implementation."""
 
 
 class VideoSamplerConfig(DataSamplerConfigBasis):
     """Configuration for video data sampler."""
 
-    av_coder: AvCoderConfig = AvCoderConfig()
+    encoder: VideoEncoderConfig = VideoEncoderConfig()
     """Configuration for the AV coder."""
     encode_to_file: bool = True
     """Whether to encode video to files directly during sampling."""
@@ -26,8 +40,12 @@ class VideoSampler(DataSampler):
 
     def on_configure(self):
         """Configure the video data sampler."""
-        self._coders = defaultdict(lambda: AvCoder(self.config.av_coder))
-        self._frame_stamp_factor = int(1e9 / self.config.av_coder.time_base)
+        encoder_cfg = self.config.encoder
+        encoder_cls = encoder_cfg.cls
+        config_cls = encoder_cls.resolve_config_type(encoder_cls)
+        cfg: AvCoderConfig = config_cls(**encoder_cfg.cfg)
+        self._coders: Dict[str, AvCoderBasis] = defaultdict(lambda: encoder_cls(cfg))
+        self._frame_stamp_factor = int(1e9 / cfg.time_base)
         self._save_stamps = self.config.save_stamps
         return True
 

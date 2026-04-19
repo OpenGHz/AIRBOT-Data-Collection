@@ -14,6 +14,7 @@ batch_size: 1
 managers:
   auto_atom:
     env:
+      to_numpy: false
       structured: false
       cameras:
         - name: env2_cam
@@ -26,9 +27,12 @@ managers:
           is_static: true
       enabled_sensors:
         - camera
+
 sampler:
-  av_coder:
-    frame_format: rgb24
+  encoder:
+    cls: mcap_data_loader.serialization.video.nvc.NvcCoder
+    cfg:
+      frame_format: rgb24
 
 hydra:
   sweeper:
@@ -37,9 +41,11 @@ hydra:
   job:
     env_set:
       # set environment variables for Graphics Library
-      CUDA_VISIBLE_DEVICES: ${hydra:job.num}
-      EGL_VISIBLE_DEVICES: ${hydra:job.num}
-      MUJOCO_EGL_DEVICE_ID: ${hydra:job.num}
+      # CUDA_VISIBLE_DEVICES: ${hydra:job.num}
+      # EGL_VISIBLE_DEVICES: ${hydra:job.num}
+      # MUJOCO_EGL_DEVICE_ID: ${hydra:job.num}
+      EGL_VISIBLE_DEVICES: ${oc.env:CUDA_VISIBLE_DEVICES,0}
+      MUJOCO_EGL_DEVICE_ID: ${oc.env:CUDA_VISIBLE_DEVICES,0}
       EGL_PLATFORM: egl
       MUJOCO_GL: egl
       PYOPENGL_PLATFORM: egl

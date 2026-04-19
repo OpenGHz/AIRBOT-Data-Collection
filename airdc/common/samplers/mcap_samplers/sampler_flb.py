@@ -2,7 +2,7 @@ from pydantic import PositiveInt
 from typing import Literal, List
 from time import time_ns
 from functools import cache
-from mcap_data_loader.utils.av_coder import AvCoderConfig
+from mcap_data_loader.serialization.video.pyav import AvCoderConfig
 from mcap_data_loader.utils.mcap_utils import MediaType
 from mcap_data_loader.serialization.flb import McapFlatBuffersWriter, FlatBuffersSchemas
 from airdc.common.samplers.mcap_samplers.basis import (
