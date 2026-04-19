@@ -9,7 +9,7 @@ defaults:
 dataset:
   directory: aao_data/door
 
-batch_size: 1
+batch_size: 7
 
 managers:
   auto_atom:
@@ -31,6 +31,7 @@ managers:
 sampler:
   encoder:
     cls: mcap_data_loader.serialization.video.nvc.NvcCoder
+    # cls: mcap_data_loader.serialization.video.pyav.AvCoder
     cfg:
       frame_format: rgb24
 
@@ -53,8 +54,8 @@ hydra:
       LD_PRELOAD: /usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.0
       NVIDIA_DRIVER_CAPABILITIES: all
 
-cam_width: 320
-cam_height: 240
+cam_width: 640
+cam_height: 480
 enable_color: true
 enable_depth: false
 enable_mask: false
