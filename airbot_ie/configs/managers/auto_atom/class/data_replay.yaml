@@ -12,6 +12,9 @@ managers:
       channel: file_path
       stream_key: augment-tasks:15
       message_buffer: true
+    env:
+      gaussian_render:
+        share_physics: true
 
 sample_limit:
   size: 1000
