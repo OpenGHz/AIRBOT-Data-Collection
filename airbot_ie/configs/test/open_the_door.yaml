@@ -9,7 +9,7 @@ defaults:
 dataset:
   directory: aao_data/door
 
-batch_size: 7
+batch_size: 14
 
 managers:
   auto_atom:
@@ -42,9 +42,9 @@ hydra:
   job:
     env_set:
       # set environment variables for Graphics Library
-      # CUDA_VISIBLE_DEVICES: ${hydra:job.num}
-      # EGL_VISIBLE_DEVICES: ${hydra:job.num}
-      # MUJOCO_EGL_DEVICE_ID: ${hydra:job.num}
+      # CUDA_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
+      # EGL_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
+      # MUJOCO_EGL_DEVICE_ID: ${floor_div:${hydra:job.num},2}
       EGL_VISIBLE_DEVICES: ${oc.env:CUDA_VISIBLE_DEVICES,0}
       MUJOCO_EGL_DEVICE_ID: ${oc.env:CUDA_VISIBLE_DEVICES,0}
       EGL_PLATFORM: egl
