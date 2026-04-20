@@ -10,7 +10,7 @@ managers:
       host: localhost
       port: 6379
       channel: file_path
-      stream_key: augment-tasks:7
+      stream_key: augment-tasks:15
       message_buffer: true
 
 sample_limit:
