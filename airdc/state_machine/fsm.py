@@ -48,6 +48,11 @@ class DemonstrateFSM(StateMachineBasis):
         return self.__interface.finish()
 
     @property
+    def dataset_config(self):
+        """Get the dataset config."""
+        return self.__interface._config.dataset
+
+    @property
     def sample_info(self):
         """Get the sample info."""
         return self.__interface._sample_info.model_copy()

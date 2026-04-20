@@ -19,6 +19,10 @@ from redis.exceptions import (
     TimeoutError,
 )
 from setproctitle import getproctitle
+from airdc.scripts.reorganize_data_by_episode import (
+    ReorganizeDataByEpisodeConfig,
+    reorganize_data_by_episode,
+)
 
 
 class RedisConfig(BaseModel, frozen=True):
@@ -36,7 +40,7 @@ class RedisConfig(BaseModel, frozen=True):
     """Redis Pub/Sub channel name when mode=pubsub (default: file_path)"""
     message_buffer: bool = True
     """Whether to keep a persistent Redis Pub/Sub subscription (default: True)"""
-    stream_key: str = "stream:file_path"
+    stream_key: str
     """Redis Stream key when mode=stream_group (default: stream:file_path)"""
     group_name: Optional[str] = None
     """Redis Stream consumer group name when mode=stream_group. None means one group per process title (group:auto_atom:<process_name>)"""
@@ -50,21 +54,29 @@ class RedisConfig(BaseModel, frozen=True):
     """Blocking timeout in milliseconds for XREADGROUP (default: 2000)"""
 
 
-@dataclass(frozen=True)
+@dataclass
 class RedisFilePathMessage:
     """A normalized file-path message received from Redis."""
 
     file_path: str
+    """File path of the source data contained in the Redis message"""
     ack_id: Optional[str] = None
+    """ACK ID for Redis Stream messages, None for Pub/Sub messages"""
+    episode_id: Optional[str] = None
+    """Optional episode ID associated with the file path, if provided in the Redis message."""
+    output_dir: Optional[str] = None
+    """Optional output directory for reorganized data, if provided in the Redis message."""
 
 
 class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
     """Configuration for discovering the demonstration data"""
 
-    redis_cfg: RedisConfig = RedisConfig()
+    redis_cfg: RedisConfig
     """Redis connection configuration"""
     max_episodes: NonNegativeInt = 0
     """Maximum number of episodes to save before waiting for new data (default: 0, meaning no limit)"""
+    reorganized_dir: Optional[Path] = None
+    """Optional directory to save reorganized demonstration data. If not set, data will not be reorganized."""
 
 
 class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
@@ -79,13 +91,20 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self._current_message = None
 
     def on_configure(self):
-        redis_cfg = self.config.redis_cfg
+        config = self.config
+        redis_cfg = config.redis_cfg
         self._connect_and_subscribe(redis_cfg.host, redis_cfg.port, redis_cfg.channel)
-        initial_message = self._wait_for_valid_data_path()
-        self.config.replay.mcap_path = initial_message.file_path
-        self._current_message = initial_message
+        # set initial demo path
+        self._wait_for_valid_data_path()
+        config.replay.mcap_path = self._current_message.file_path
         configured = super().on_configure()
-        if configured and not self.config.max_episodes:
+        data_roots = {fsm.dataset_config.absolute_directory.parent for fsm in self.fsms}
+        if len(data_roots) != 1:
+            raise ValueError(
+                f"Expected all FSMs to use the same data root, but found: {data_roots}"
+            )
+        self._data_root = data_roots.pop()
+        if configured and not config.max_episodes:
             self._ack_current_message()
         return configured
 
@@ -170,19 +189,13 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             self.get_logger().info(f"<- Received file path: {file_path}")
             return RedisFilePathMessage(file_path=file_path)
 
-    def _extract_stream_file_path(self, data: dict) -> str | None:
-        if "file_path" in data:
-            return str(data["file_path"]).strip()
-        if len(data) == 1:
-            return str(next(iter(data.values()))).strip()
-        return None
-
     def _read_stream_group_message(self) -> RedisFilePathMessage:
         redis_cfg = self.config.redis_cfg
         while True:
             messages = self._client.xreadgroup(
                 groupname=self._stream_group_name,
                 consumername=self._stream_consumer_name,
+                # NOTE: streams={key: ">"} 中的 ">" 表示只读取该 consumer 尚未投递过的新消息;若改成具体 ID,则会读 pending list 中的历史消息(用于崩溃恢复场景)
                 streams={redis_cfg.stream_key: ">"},
                 count=max(1, redis_cfg.read_count),
                 block=redis_cfg.block_ms,
@@ -191,17 +204,25 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                 continue
             stream_name, msg_list = messages[0]
             for msg_id, data in msg_list:
-                file_path = self._extract_stream_file_path(data)
+                data: dict
+                file_path = data.get(self.config.redis_cfg.channel)
                 if not file_path:
                     self.get_logger().warning(
                         "Received Redis Stream message without a usable file path: "
                         f"id={msg_id}, data={data}. Leaving it pending."
                     )
                     continue
+                episode_id = data.get("sample_id")
+                output_dir = data.get("output_dir")
                 self.get_logger().info(
-                    f"<- Received file path from [{stream_name}] {msg_id}: {file_path}"
+                    f"<- Received file path from [{stream_name}] {msg_id}: {file_path} -> {output_dir}"
                 )
-                return RedisFilePathMessage(file_path=file_path, ack_id=msg_id)
+                return RedisFilePathMessage(
+                    file_path=file_path,
+                    ack_id=msg_id,
+                    episode_id=episode_id,
+                    output_dir=output_dir,
+                )
 
     def _waiting_for_data_path_once(self) -> RedisFilePathMessage:
         if self._use_stream_group:
@@ -223,10 +244,9 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             message = self._waiting_for_data_path_once()
             path = Path(message.file_path).expanduser()
             if path.exists():
-                return RedisFilePathMessage(
-                    file_path=str(path.resolve()),
-                    ack_id=message.ack_id,
-                )
+                message.file_path = str(path.resolve())
+                self._current_message = message
+                return message
             self.get_logger().warning(
                 f"Received file path does not exist: {path.resolve(strict=False)}. "
                 "Waiting for next data..."
@@ -258,24 +278,61 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         return False
 
     def update(self):
-        max_episodes = self.config.max_episodes
-        if max_episodes and self._total_saved >= max_episodes:
+        config = self.config
+        max_episodes = config.max_episodes
+        # if max_episodes and self._total_saved >= max_episodes:
+        if self._cur_done_count > 0:
+            if self._cur_done_count != len(self.fsms):
+                self.get_logger().warning(
+                    f"Expected all FSMs to be done at the same time, but found "
+                    f"{self._cur_done_count} done FSMs out of {len(self.fsms)}."
+                )
+                # make all FSMs state to active to trigger reset in super
+                for fsm in self.fsms:
+                    if fsm.get_state() is State.sampling:
+                        fsm.act(DAction.abandon)
+            self._cur_done_count = 0
             self.get_logger().info(
                 f"Total saved demonstrations: {self._total_saved}. Waiting for next data..."
             )
-            # make all FSMs state to active to trigger reset in super
-            for fsm in self.fsms:
-                if fsm.get_state() is State.sampling:
-                    fsm.act(DAction.abandon)
+            output_dir = self._current_message.output_dir
+            if output_dir:
+                out_dir = Path(output_dir)
+                reorg_dir = out_dir.parent
+                episode_id = out_dir.name
+            else:
+                reorg_dir = config.reorganized_dir
+                episode_id = ""
+            if reorg_dir:
+                if max_episodes != 1:
+                    raise NotImplementedError(
+                        "Reorganizing data by episode is only supported when max_episodes=1"
+                    )
+                cur_episodes = {fsm.sample_info.episode for fsm in self.fsms}
+                if len(cur_episodes) != 1:
+                    self.get_logger().warning(
+                        f"Expected all FSMs to be on the same episode, but found: {cur_episodes}."
+                    )
+                # NOTE: If a data replay fails, a retry should theoretically also fail, so the next one should proceed immediately. Therefore, different environments may have different output episodes corresponding to the same input episode_id. Currently, different environments theoretically correspond to the same physical process, only the rendering is different. Therefore, theoretically, there should not be a situation where some succeed and some fail.
+                for cur_episode in cur_episodes:
+                    episode_args = [str(cur_episode)]
+                    if episode_id:
+                        episode_args.append(episode_id)
+                    reorganize_data_by_episode(
+                        ReorganizeDataByEpisodeConfig(
+                            source_root=self._data_root,
+                            output_root=reorg_dir,
+                            overwrite=bool(episode_id),
+                            episode=episode_args,
+                        )
+                    )
             # self._runner.reset()
             # Treat max_episodes as the completion boundary for the current Redis task.
             if not self._ack_current_message():
                 return True
             self._total_saved = 0
             next_message = self._wait_for_valid_data_path()
-            self.config.replay.mcap_path = next_message.file_path
             self._runner.set_demo_path(mcap_path=next_message.file_path)
-            self._current_message = next_message
         return super().update()
 
     def on_shutdown(self):

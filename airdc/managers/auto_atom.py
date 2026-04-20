@@ -25,6 +25,7 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
 
     def on_configure(self):
         self._runner = self.runner_cls().from_config(self.config)
+        self._cur_done_count = 0
         self._runner_done_handled = np.zeros(len(self.fsms), dtype=bool)
         self._total_saved = 0
         return True
@@ -80,9 +81,11 @@ class AutoAtomManagerBasis(DemonstrateManagerBasis):
         fail_ids = np.setdiff1d(done_ids, success_ids)
         for i in success_ids:
             fsms[int(i)].act(DAction.save)
+        # FIXME: what if failed to save?
         self._total_saved += len(success_ids)
         for i in fail_ids:
             fsms[int(i)].act(DAction.abandon)
+        self._cur_done_count = len(done_ids)
         self._runner_done_handled[new_done_mask] = True
         return True
 

@@ -45,6 +45,7 @@ def produce(
     port: int,
     stream_key: str,
     field_name: str,
+    output_dir: str | None,
     file_paths: list[str],
     check_exists: bool,
     interval: float,
@@ -58,7 +59,7 @@ def produce(
     print(f"Appending to stream: {stream_key}\n")
 
     for idx, path in enumerate(normalized_paths):
-        payload = {field_name: str(path)}
+        payload = {field_name: str(path), "output_dir": output_dir or ""}
         if maxlen is None:
             message_id = client.xadd(stream_key, payload)
         else:
@@ -79,13 +80,18 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=6379, help="Redis port")
     parser.add_argument(
         "--stream-key",
-        default="stream:file_path",
+        default="augment-tasks:7",
         help="Redis Stream key",
     )
     parser.add_argument(
         "--field-name",
         default="file_path",
         help="Payload field name in XADD",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="outputs/episode_0",
+        help="Optional output directory to include in the message payload",
     )
     parser.add_argument(
         "--no-check",
@@ -111,6 +117,7 @@ def main() -> None:
         port=args.port,
         stream_key=args.stream_key,
         field_name=args.field_name,
+        output_dir=args.output_dir,
         file_paths=args.file_paths,
         check_exists=not args.no_check,
         interval=args.interval,
