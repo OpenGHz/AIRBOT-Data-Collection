@@ -45,7 +45,7 @@ class RedisConfig(BaseModel, frozen=True):
     group_name: Optional[str] = None
     """Redis Stream consumer group name when mode=stream_group. None means one group per process title (group:auto_atom:<process_name>)"""
     consumer_name: Optional[str] = None
-    """Redis Stream consumer name when mode=stream_group. Defaults to hostname-pid"""
+    """Redis Stream consumer name when mode=stream_group. None means one consumer per process (consumer:auto_atom:<hostname>:<process_name>)"""
     group_start_id: Union[str, NonNegativeInt] = 0
     """Start ID used when creating a new consumer group (default: 0)"""
     read_count: NonNegativeInt = 1
@@ -65,7 +65,7 @@ class RedisFilePathMessage:
     episode_id: Optional[str] = None
     """Optional episode ID associated with the file path, if provided in the Redis message."""
     output_dir: Optional[str] = None
-    """Optional output directory for reorganized data, if provided in the Redis message."""
+    """Optional output directory for reorganized data. When provided, existing links in that episode slot may be replaced."""
 
 
 class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
@@ -76,7 +76,7 @@ class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
     max_episodes: NonNegativeInt = 0
     """Maximum number of episodes to save before waiting for new data (default: 0, meaning no limit)"""
     reorganized_dir: Optional[Path] = None
-    """Optional directory to save reorganized demonstration data. If not set, data will not be reorganized."""
+    """Optional directory to save reorganized demonstration data. Missing output directories are created automatically."""
 
 
 class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
@@ -149,7 +149,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         redis_cfg = self.config.redis_cfg
         self._stream_group_name = redis_cfg.group_name or self._default_group_name()
         self._stream_consumer_name = (
-            redis_cfg.consumer_name or f"auto-atom-{socket.gethostname()}-{os.getpid()}"
+            redis_cfg.consumer_name or self._default_consumer_name()
         )
         try:
             self._client.xgroup_create(
@@ -180,6 +180,12 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         if not process_name:
             process_name = str(os.getpid())
         return f"group:auto_atom:{process_name}"
+
+    def _default_consumer_name(self) -> str:
+        process_name = getproctitle().strip()
+        if not process_name:
+            process_name = str(os.getpid())
+        return f"consumer:auto_atom:{socket.gethostname()}:{process_name}"
 
     def _read_pubsub_message(self, pubsub) -> RedisFilePathMessage:
         for message in pubsub.listen():

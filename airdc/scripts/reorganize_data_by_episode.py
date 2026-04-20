@@ -54,9 +54,12 @@ class ReorganizeDataByEpisodeConfig(BaseModel):
 
     output_root: Path = Field(
         Path("data/aao_data_by_episode"),
-        description="Output root in the format <episode>/<task>.",
+        description=(
+            "Output root in the format <episode>/<task>. Missing output "
+            "directories are created automatically."
+        ),
     )
-    """Output root in the format <episode>/<task>."""
+    """Output root in the format <episode>/<task>, created as needed."""
 
     dry_run: bool = Field(
         False,
@@ -267,7 +270,7 @@ def ensure_destination(
 
 
 def create_relative_symlink(source: Path, destination: Path) -> None:
-    """Create a relative symlink from destination to source."""
+    """Create a relative symlink from destination to source, creating parent directories first."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     relative_target = os.path.relpath(source, start=destination.parent)
     destination.symlink_to(relative_target)
@@ -332,7 +335,7 @@ def execute_plan(
 def reorganize_data_by_episode(
     config: ReorganizeDataByEpisodeConfig,
 ) -> ExecutionSummary:
-    """Run the reorganization workflow from a validated config."""
+    """Run the reorganization workflow from a validated config and create missing output directories on demand."""
     source_root = config.source_root.expanduser().resolve()
     output_root = config.output_root.expanduser().resolve()
     episode_mapping = build_episode_mapping(config.episode)
