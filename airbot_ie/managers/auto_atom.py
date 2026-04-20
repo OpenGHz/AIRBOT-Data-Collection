@@ -314,13 +314,13 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     raise NotImplementedError(
                         "Reorganizing data by episode is only supported when max_episodes=1"
                     )
-                cur_episodes = {fsm.sample_info.episode for fsm in self.fsms}
-                if len(cur_episodes) != 1:
+                last_saved_episodes = {fsm.sample_info.episode - 1 for fsm in self.fsms}
+                if len(last_saved_episodes) != 1:
                     self.get_logger().warning(
-                        f"Expected all FSMs to be on the same episode, but found: {cur_episodes}."
+                        f"Expected all FSMs to be on the same episode, but found: {last_saved_episodes}."
                     )
                 # NOTE: If a data replay fails, a retry should theoretically also fail, so the next one should proceed immediately. Therefore, different environments may have different output episodes corresponding to the same input episode_id. Currently, different environments theoretically correspond to the same physical process, only the rendering is different. Therefore, theoretically, there should not be a situation where some succeed and some fail.
-                for cur_episode in cur_episodes:
+                for cur_episode in last_saved_episodes:
                     episode_args = [str(cur_episode)]
                     if episode_id:
                         episode_args.append(episode_id)
