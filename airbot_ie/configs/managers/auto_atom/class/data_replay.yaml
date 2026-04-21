@@ -1,5 +1,7 @@
 # @package _global_
 
+project_id: 7
+
 managers:
   auto_atom:
     _target_: airbot_ie.managers.auto_atom.DiscoverAutoAtomDataReplayManager
@@ -10,7 +12,7 @@ managers:
       host: localhost
       port: 6379
       channel: file_path
-      stream_key: augment-tasks:15
+      stream_key: augment-tasks:${project_id}
       message_buffer: true
     env:
       gaussian_render:
