@@ -6,7 +6,7 @@ import shutil
 import sys
 import logging
 from pathlib import Path
-from typing import List, NamedTuple, Optional, Sequence, Tuple
+from typing import List, Literal, NamedTuple, Optional, Sequence, Tuple
 
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import CliApp
@@ -18,12 +18,15 @@ from airdc.utils import init_logging
 logger = logging.getLogger(__name__)
 
 
+LinkType = Literal["symlink", "hardlink"]
+
+
 class LinkOperation(BaseModel):
     source: Path
     """Source episode directory."""
 
     destination: Path
-    """Destination symlink path."""
+    """Destination link path."""
 
 
 class EpisodeMapping(BaseModel):
@@ -38,11 +41,14 @@ class ExecutionSummary(BaseModel):
     total_mappings: int = 0
     """Number of planned mappings."""
 
-    created_symlinks: int = 0
-    """Number of new symlinks created."""
+    created_links: int = 0
+    """Number of new links created."""
 
-    reused_symlinks: int = 0
-    """Number of matching existing symlinks reused."""
+    reused_links: int = 0
+    """Number of matching existing links reused."""
+
+    copied_files: int = 0
+    """Number of files copied as fallback when a hard link could not be created."""
 
 
 class ReorganizeDataByEpisodeConfig(BaseModel):
@@ -72,6 +78,17 @@ class ReorganizeDataByEpisodeConfig(BaseModel):
         description="Replace existing paths under the output root when necessary.",
     )
     """Whether to replace existing paths."""
+
+    link_type: LinkType = Field(
+        "symlink",
+        description=(
+            "How to link source episodes into the output tree. 'symlink' creates a "
+            "relative symlink per episode directory. 'hardlink' walks the episode "
+            "directory, mirrors the structure with mkdir, and hard-links each file; "
+            "files that cannot be hard-linked (e.g. across filesystems) are copied."
+        ),
+    )
+    """Link strategy: 'symlink' (default) or 'hardlink'."""
 
     episode: Optional[List[str]] = Field(
         None,
@@ -244,12 +261,13 @@ def ensure_destination(
     source: Path,
     overwrite: bool,
     dry_run: bool,
+    link_type: LinkType,
 ) -> DestinationStatus:
     """Check whether the destination should be created or reused."""
     if not path_exists(destination):
         return DestinationStatus(True, False)
 
-    if destination.is_symlink():
+    if link_type == "symlink" and destination.is_symlink():
         current_target = destination.resolve(strict=False)
         desired_target = source.resolve(strict=False)
         if current_target == desired_target:
@@ -276,18 +294,62 @@ def create_relative_symlink(source: Path, destination: Path) -> None:
     destination.symlink_to(relative_target)
 
 
+def create_hardlink_tree(source: Path, destination: Path) -> Tuple[int, int]:
+    """Mirror `source` under `destination`, hard-linking files (copying on failure).
+
+    Returns (linked_files, copied_files). Symlinks inside the source are recreated
+    as symlinks at the destination rather than dereferenced.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    linked = 0
+    copied = 0
+    for root, _dirs, files in os.walk(source, followlinks=False):
+        root_path = Path(root)
+        relative_dir = root_path.relative_to(source)
+        dest_dir = destination / relative_dir
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        for file_name in files:
+            src_file = root_path / file_name
+            dst_file = dest_dir / file_name
+
+            if src_file.is_symlink():
+                link_target = os.readlink(src_file)
+                os.symlink(link_target, dst_file)
+                continue
+
+            try:
+                os.link(src_file, dst_file)
+                linked += 1
+            except OSError as exc:
+                logger.debug(
+                    "Hard link failed for %s -> %s (%s); falling back to copy.",
+                    dst_file,
+                    src_file,
+                    exc,
+                )
+                shutil.copy2(src_file, dst_file)
+                copied += 1
+
+    return linked, copied
+
+
 def execute_plan(
     operations: Sequence[LinkOperation],
     overwrite: bool,
     dry_run: bool,
+    link_type: LinkType,
 ) -> ExecutionSummary:
-    """Execute the planned symlink operations and log the summary."""
+    """Execute the planned link operations and log the summary."""
     if not operations:
         logger.info("No task/episode directories found. Nothing to do.")
         return ExecutionSummary()
 
     created_count = 0
     reused_count = 0
+    copied_count = 0
+    action_tag = "SYMLINK" if link_type == "symlink" else "HARDLINK"
 
     for operation in operations:
         destination_status = ensure_destination(
@@ -295,6 +357,7 @@ def execute_plan(
             operation.source,
             overwrite=overwrite,
             dry_run=dry_run,
+            link_type=link_type,
         )
         if destination_status.reused_existing:
             reused_count += 1
@@ -308,27 +371,47 @@ def execute_plan(
 
         if dry_run:
             logger.info(
-                "[LINK] {} -> {}".format(operation.destination, operation.source)
+                "[{}] {} -> {}".format(
+                    action_tag, operation.destination, operation.source
+                )
             )
             created_count += 1
             continue
 
-        create_relative_symlink(operation.source, operation.destination)
+        if link_type == "symlink":
+            create_relative_symlink(operation.source, operation.destination)
+        else:
+            _linked, copied = create_hardlink_tree(
+                operation.source, operation.destination
+            )
+            copied_count += copied
         created_count += 1
 
     summary = ExecutionSummary(
         total_mappings=len(operations),
-        created_symlinks=created_count,
-        reused_symlinks=reused_count,
+        created_links=created_count,
+        reused_links=reused_count,
+        copied_files=copied_count,
     )
-    logger.info(
-        "Done. Prepared {} mappings, created {} symlinks, reused {} existing "
-        "symlinks.".format(
-            summary.total_mappings,
-            summary.created_symlinks,
-            summary.reused_symlinks,
+    if link_type == "hardlink":
+        logger.info(
+            "Done. Prepared {} mappings, created {} hardlink trees, reused {} "
+            "existing destinations, copied {} files as fallback.".format(
+                summary.total_mappings,
+                summary.created_links,
+                summary.reused_links,
+                summary.copied_files,
+            )
         )
-    )
+    else:
+        logger.info(
+            "Done. Prepared {} mappings, created {} symlinks, reused {} existing "
+            "symlinks.".format(
+                summary.total_mappings,
+                summary.created_links,
+                summary.reused_links,
+            )
+        )
     return summary
 
 
@@ -355,6 +438,7 @@ def reorganize_data_by_episode(
         operations,
         overwrite=config.overwrite,
         dry_run=config.dry_run,
+        link_type=config.link_type,
     )
 
 
