@@ -164,6 +164,8 @@ class DemonstrateConfig(DemonstrateModules):
     key_remap: MappingCall = CallableKeyMappingDict
     """Remapping the data keys. It will be cached for efficiency.
     It will be applied after key_merge."""
+    progress_bar: bool = True
+    """Whether to use progress bar for data collection."""
 
     @field_validator("send_actions", mode="after")
     def validate_send_actions(cls, v):

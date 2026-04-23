@@ -438,3 +438,23 @@ class ProgressBar(Generic[T]):
 
     def __iter__(self) -> Iterator[T]:
         return iter(self.progress_bar)
+
+
+class ProgressBarMock:
+    def __init__(self, *args, **kwargs):
+        """Do nothing, just for compatibility with ProgressBar."""
+
+    def update(self, index: Optional[int] = None):
+        pass
+
+    def reset(self, total: int = 0, desc: Optional[str] = None):
+        pass
+
+    def clear(self):
+        pass
+
+    def close(self):
+        pass
+
+    def __iter__(self) -> Iterator:
+        return iter([])

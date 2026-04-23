@@ -17,7 +17,7 @@ from airdc.demonstrate.basis import SampleInfo
 from airdc.basis import Bcolors
 from airdc.utils import get_items_by_ext, zip
 from airdc.common.utils.system_info import SystemInfo
-from airdc.common.utils.progress import ProgressBar
+from airdc.common.utils.progress import ProgressBar, ProgressBarMock
 from airdc.common.demonstrators.basis import Demonstrator
 from airdc.state_machine.basis import CallbackEventType
 from collections import defaultdict
@@ -120,10 +120,14 @@ class DemonstrateInterface:
             )
 
     def activate(self) -> bool:
-        self._bar = ProgressBar(
-            f"Episode {self._sample_info.episode}",
-            self._sample_limit.size,
-            leave_mode=-1,
+        self._bar = (
+            ProgressBar(
+                f"Episode {self._sample_info.episode}",
+                self._sample_limit.size,
+                leave_mode=-1,
+            )
+            if self._config.progress_bar
+            else ProgressBarMock()
         )
         Path(self._config.dataset.absolute_directory).mkdir(parents=True, exist_ok=True)
         self.get_logger().info("Warming up...")
@@ -177,7 +181,7 @@ class DemonstrateInterface:
         # TODO: should react and post action in capture and update?
         info = self._sample_info
         if info.index == 0:
-            self.start_stamp = time.perf_counter()
+            self._update_start_stamp = time.perf_counter()
         if self.is_reached:
             self.get_logger().warning(
                 f"Sample limitation reached: {info.index} samples"
@@ -217,7 +221,13 @@ class DemonstrateInterface:
 
     def _show_save_info(self, path: str, flag: bool) -> bool:
         if flag:
-            self.get_logger().info(Bcolors.green(f"Saved to {path}"))
+            update_time_taken = self._save_start_stamp - self._update_start_stamp
+            save_time_taken = time.perf_counter() - self._save_start_stamp
+            self.get_logger().info(
+                Bcolors.green(
+                    f"Saved to {path} (update: {update_time_taken:.2f}s, save: {save_time_taken:.2f}s)"
+                )
+            )
         else:
             self.get_logger().error(f"Failed to save to {path}")
         return flag
@@ -225,6 +235,7 @@ class DemonstrateInterface:
     def save(self) -> None:
         """Save the sampled data and be ready for the next episode."""
         # FIXME: explicitly specifying the action type is coupled with the state machine logic
+        self._save_start_stamp = time.perf_counter()
         self._wait_action_futures(DemonstrateAction.update)
         save_path = self._save_path
         if self._use_executor(DemonstrateAction.save):
@@ -356,7 +367,7 @@ class DemonstrateInterface:
         reach_size = limit.size > 0 and self._sample_info.index >= limit.size
         reach_duration = (
             limit.duration > 0
-            and time.perf_counter() - self.start_stamp >= limit.duration
+            and time.perf_counter() - self._update_start_stamp >= limit.duration
         )
         return reach_size or reach_duration
 
