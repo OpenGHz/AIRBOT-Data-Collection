@@ -48,5 +48,7 @@ class DataCollectionArgs(DemonstrateConfig, DataCollectionConfig):
     for the CLI configuration.
     """
 
-    # the finite state machine config
     fsm: StateMachineConfig
+    """the finite state machine config"""
+    job_id_bias: NonNegativeInt = 0
+    """the bias for the job id"""

@@ -22,6 +22,7 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
     """
     The main manager of data collection.
     """
+    job_id += config.job_id_bias
     main_name = f"{PACKAGE_NAME}[{job_id}]" if job_id is not None else PACKAGE_NAME
     setproctitle(main_name)
     logger = getLogger(main_name)
