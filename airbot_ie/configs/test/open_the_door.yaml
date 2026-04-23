@@ -36,6 +36,7 @@ sampler:
     # cls: mcap_data_loader.serialization.video.pyav.AvCoder
     cfg:
       frame_format: rgb24
+      fps: 20
 
 hydra:
   sweeper:
