@@ -40,7 +40,7 @@ sampler:
 hydra:
   sweeper:
     params:
-      door_name: door0,door1
+      door_name: door0,door1,door2,door3
   job:
     env_set:
       # set environment variables for Graphics Library

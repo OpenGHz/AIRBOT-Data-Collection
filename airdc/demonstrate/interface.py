@@ -223,11 +223,16 @@ class DemonstrateInterface:
         if flag:
             update_time_taken = self._save_start_stamp - self._update_start_stamp
             save_time_taken = time.perf_counter() - self._save_start_stamp
-            self.get_logger().info(
-                Bcolors.green(
-                    f"Saved to {path} (update: {update_time_taken:.2f}s, save: {save_time_taken:.2f}s)"
-                )
-            )
+            samples = self._sample_info.index
+            ep_info = {
+                "update": f"{update_time_taken:.2f}",
+                "save": f"{save_time_taken:.2f}",
+                "freq": f"{samples / update_time_taken:.2f}"
+                if update_time_taken > 0
+                else "inf",
+                "samples": samples,
+            }
+            self.get_logger().info(Bcolors.green(f"Saved to {path}. {ep_info}"))
         else:
             self.get_logger().error(f"Failed to save to {path}")
         return flag
