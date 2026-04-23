@@ -16,7 +16,7 @@ progress_bar: false
 managers:
   auto_atom:
     env:
-      to_numpy: false
+      to_numpy: true
       structured: false
       cameras:
         - name: env2_cam
@@ -32,11 +32,11 @@ managers:
 
 sampler:
   encoder:
-    cls: mcap_data_loader.serialization.video.nvc.NvcCoder
-    # cls: mcap_data_loader.serialization.video.pyav.AvCoder
+    # cls: mcap_data_loader.serialization.video.nvc.NvcCoder
+    cls: mcap_data_loader.serialization.video.pyav.AvCoder
     cfg:
       frame_format: rgb24
-      fps: 20
+      # fps: 20
 
 hydra:
   sweeper:
