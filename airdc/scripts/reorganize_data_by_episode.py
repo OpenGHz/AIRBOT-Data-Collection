@@ -18,15 +18,15 @@ from airdc.utils import init_logging
 logger = logging.getLogger(__name__)
 
 
-LinkType = Literal["symlink", "hardlink"]
+FileType = Literal["symlink", "hardlink", "copy", "move"]
 
 
-class LinkOperation(BaseModel):
+class FileOperation(BaseModel):
     source: Path
     """Source episode directory."""
 
     destination: Path
-    """Destination link path."""
+    """Destination path."""
 
 
 class EpisodeMapping(BaseModel):
@@ -41,11 +41,11 @@ class ExecutionSummary(BaseModel):
     total_mappings: int = 0
     """Number of planned mappings."""
 
-    created_links: int = 0
-    """Number of new links created."""
+    created_outputs: int = 0
+    """Number of new outputs created."""
 
-    reused_links: int = 0
-    """Number of matching existing links reused."""
+    reused_outputs: int = 0
+    """Number of matching existing outputs reused."""
 
     copied_files: int = 0
     """Number of files copied as fallback when a hard link could not be created."""
@@ -79,16 +79,18 @@ class ReorganizeDataByEpisodeConfig(BaseModel):
     )
     """Whether to replace existing paths."""
 
-    link_type: LinkType = Field(
+    file_type: FileType = Field(
         "symlink",
         description=(
-            "How to link source episodes into the output tree. 'symlink' creates a "
-            "relative symlink per episode directory. 'hardlink' walks the episode "
-            "directory, mirrors the structure with mkdir, and hard-links each file; "
-            "files that cannot be hard-linked (e.g. across filesystems) are copied."
+            "How to materialize source episodes in the output tree. 'symlink' "
+            "creates a relative symlink per episode directory. 'hardlink' walks the "
+            "episode directory, mirrors the structure with mkdir, and hard-links "
+            "each file; files that cannot be hard-linked (e.g. across filesystems) "
+            "are copied. 'copy' recursively copies the episode directory. 'move' "
+            "moves the episode directory, removing it from the source tree."
         ),
     )
-    """Link strategy: 'symlink' (default) or 'hardlink'."""
+    """File strategy: 'symlink' (default), 'hardlink', 'copy', or 'move'."""
 
     episode: Optional[List[str]] = Field(
         None,
@@ -192,8 +194,8 @@ def collect_operations(
     source_root: Path,
     output_root: Path,
     episode_mapping: Optional[EpisodeMapping] = None,
-) -> List[LinkOperation]:
-    """Collect all source-to-destination symlink operations."""
+) -> List[FileOperation]:
+    """Collect all source-to-destination operations."""
     if not source_root.exists() or not source_root.is_dir():
         raise FileNotFoundError(
             "Source root not found or not a directory: {}".format(source_root)
@@ -221,7 +223,7 @@ def collect_operations(
                 else episode_dir.name
             )
             operations.append(
-                LinkOperation(
+                FileOperation(
                     source=episode_dir,
                     destination=output_root / output_episode_name / task_dir.name,
                 )
@@ -261,13 +263,13 @@ def ensure_destination(
     source: Path,
     overwrite: bool,
     dry_run: bool,
-    link_type: LinkType,
+    file_type: FileType,
 ) -> DestinationStatus:
     """Check whether the destination should be created or reused."""
     if not path_exists(destination):
         return DestinationStatus(True, False)
 
-    if link_type == "symlink" and destination.is_symlink():
+    if file_type == "symlink" and destination.is_symlink():
         current_target = destination.resolve(strict=False)
         desired_target = source.resolve(strict=False)
         if current_target == desired_target:
@@ -335,13 +337,33 @@ def create_hardlink_tree(source: Path, destination: Path) -> Tuple[int, int]:
     return linked, copied
 
 
+def copy_tree(source: Path, destination: Path) -> None:
+    """Recursively copy `source` into `destination`, preserving inner symlinks."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, destination, symlinks=True)
+
+
+def move_tree(source: Path, destination: Path) -> None:
+    """Move `source` to `destination`, creating parent directories as needed."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source), str(destination))
+
+
+ACTION_TAGS: dict[FileType, str] = {
+    "symlink": "SYMLINK",
+    "hardlink": "HARDLINK",
+    "copy": "COPY",
+    "move": "MOVE",
+}
+
+
 def execute_plan(
-    operations: Sequence[LinkOperation],
+    operations: Sequence[FileOperation],
     overwrite: bool,
     dry_run: bool,
-    link_type: LinkType,
+    file_type: FileType,
 ) -> ExecutionSummary:
-    """Execute the planned link operations and log the summary."""
+    """Execute the planned file operations and log the summary."""
     if not operations:
         logger.info("No task/episode directories found. Nothing to do.")
         return ExecutionSummary()
@@ -349,7 +371,7 @@ def execute_plan(
     created_count = 0
     reused_count = 0
     copied_count = 0
-    action_tag = "SYMLINK" if link_type == "symlink" else "HARDLINK"
+    action_tag = ACTION_TAGS[file_type]
 
     for operation in operations:
         destination_status = ensure_destination(
@@ -357,7 +379,7 @@ def execute_plan(
             operation.source,
             overwrite=overwrite,
             dry_run=dry_run,
-            link_type=link_type,
+            file_type=file_type,
         )
         if destination_status.reused_existing:
             reused_count += 1
@@ -378,38 +400,60 @@ def execute_plan(
             created_count += 1
             continue
 
-        if link_type == "symlink":
+        if file_type == "symlink":
             create_relative_symlink(operation.source, operation.destination)
-        else:
+        elif file_type == "hardlink":
             _linked, copied = create_hardlink_tree(
                 operation.source, operation.destination
             )
             copied_count += copied
+        elif file_type == "copy":
+            copy_tree(operation.source, operation.destination)
+        elif file_type == "move":
+            move_tree(operation.source, operation.destination)
         created_count += 1
 
     summary = ExecutionSummary(
         total_mappings=len(operations),
-        created_links=created_count,
-        reused_links=reused_count,
+        created_outputs=created_count,
+        reused_outputs=reused_count,
         copied_files=copied_count,
     )
-    if link_type == "hardlink":
+    if file_type == "hardlink":
         logger.info(
             "Done. Prepared {} mappings, created {} hardlink trees, reused {} "
             "existing destinations, copied {} files as fallback.".format(
                 summary.total_mappings,
-                summary.created_links,
-                summary.reused_links,
+                summary.created_outputs,
+                summary.reused_outputs,
                 summary.copied_files,
             )
         )
-    else:
+    elif file_type == "symlink":
         logger.info(
             "Done. Prepared {} mappings, created {} symlinks, reused {} existing "
             "symlinks.".format(
                 summary.total_mappings,
-                summary.created_links,
-                summary.reused_links,
+                summary.created_outputs,
+                summary.reused_outputs,
+            )
+        )
+    elif file_type == "copy":
+        logger.info(
+            "Done. Prepared {} mappings, copied {} trees, reused {} existing "
+            "destinations.".format(
+                summary.total_mappings,
+                summary.created_outputs,
+                summary.reused_outputs,
+            )
+        )
+    else:
+        logger.info(
+            "Done. Prepared {} mappings, moved {} trees, reused {} existing "
+            "destinations.".format(
+                summary.total_mappings,
+                summary.created_outputs,
+                summary.reused_outputs,
             )
         )
     return summary
@@ -438,7 +482,7 @@ def reorganize_data_by_episode(
         operations,
         overwrite=config.overwrite,
         dry_run=config.dry_run,
-        link_type=config.link_type,
+        file_type=config.file_type,
     )
 
 

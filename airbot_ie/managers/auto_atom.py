@@ -329,7 +329,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                             source_root=self._data_root,
                             output_root=reorg_dir,
                             overwrite=bool(episode_id),
-                            link_type="hardlink",
+                            file_type="move",
                             episode=episode_args,
                         )
                     )
