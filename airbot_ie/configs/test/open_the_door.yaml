@@ -9,7 +9,7 @@ defaults:
 dataset:
   directory: aao_data/door
 
-batch_size: 14
+batch_size: 5
 
 progress_bar: false
 
@@ -41,7 +41,8 @@ sampler:
 hydra:
   sweeper:
     params:
-      door_name: door0,door1,door2,door3
+      door_name: door0,door1,door2,door3,door4,door5
+
   job:
     env_set:
       # set environment variables for Graphics Library

@@ -343,10 +343,51 @@ def copy_tree(source: Path, destination: Path) -> None:
     shutil.copytree(source, destination, symlinks=True)
 
 
-def move_tree(source: Path, destination: Path) -> None:
-    """Move `source` to `destination`, creating parent directories as needed."""
+def move_tree(source: Path, destination: Path) -> Tuple[int, int]:
+    """Mirror `source` under `destination`, moving files into place.
+
+    Walks the source tree, mirrors it via mkdir at the destination, and moves
+    each file with `os.rename` (falling back to copy+unlink when the rename
+    crosses filesystems). Source directories are retained so consumers that
+    cached paths into the source tree still see valid parents.
+
+    Returns (moved_files, copied_files).
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(source), str(destination))
+
+    moved = 0
+    copied = 0
+    for root, _dirs, files in os.walk(source, followlinks=False):
+        root_path = Path(root)
+        relative_dir = root_path.relative_to(source)
+        dest_dir = destination / relative_dir
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        for file_name in files:
+            src_file = root_path / file_name
+            dst_file = dest_dir / file_name
+
+            if src_file.is_symlink():
+                link_target = os.readlink(src_file)
+                os.symlink(link_target, dst_file)
+                src_file.unlink()
+                continue
+
+            try:
+                os.rename(src_file, dst_file)
+                moved += 1
+            except OSError as exc:
+                logger.debug(
+                    "Rename failed for %s -> %s (%s); falling back to copy+unlink.",
+                    dst_file,
+                    src_file,
+                    exc,
+                )
+                shutil.copy2(src_file, dst_file)
+                src_file.unlink()
+                copied += 1
+
+    return moved, copied
 
 
 ACTION_TAGS: dict[FileType, str] = {
@@ -410,7 +451,8 @@ def execute_plan(
         elif file_type == "copy":
             copy_tree(operation.source, operation.destination)
         elif file_type == "move":
-            move_tree(operation.source, operation.destination)
+            _moved, copied = move_tree(operation.source, operation.destination)
+            copied_count += copied
         created_count += 1
 
     summary = ExecutionSummary(
@@ -450,10 +492,11 @@ def execute_plan(
     else:
         logger.info(
             "Done. Prepared {} mappings, moved {} trees, reused {} existing "
-            "destinations.".format(
+            "destinations, copied {} files as fallback.".format(
                 summary.total_mappings,
                 summary.created_outputs,
                 summary.reused_outputs,
+                summary.copied_files,
             )
         )
     return summary
