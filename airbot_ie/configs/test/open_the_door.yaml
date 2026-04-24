@@ -46,11 +46,9 @@ hydra:
   job:
     env_set:
       # set environment variables for Graphics Library
-      # CUDA_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
-      # EGL_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
-      # MUJOCO_EGL_DEVICE_ID: ${floor_div:${hydra:job.num},2}
-      EGL_VISIBLE_DEVICES: ${oc.env:CUDA_VISIBLE_DEVICES,0}
-      MUJOCO_EGL_DEVICE_ID: ${oc.env:CUDA_VISIBLE_DEVICES,0}
+      CUDA_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
+      EGL_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
+      MUJOCO_EGL_DEVICE_ID: ${floor_div:${hydra:job.num},2}
       EGL_PLATFORM: egl
       MUJOCO_GL: egl
       PYOPENGL_PLATFORM: egl
