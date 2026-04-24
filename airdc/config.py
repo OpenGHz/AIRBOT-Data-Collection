@@ -50,5 +50,7 @@ class DataCollectionArgs(DemonstrateConfig, DataCollectionConfig):
 
     fsm: StateMachineConfig
     """the finite state machine config"""
+    job_id: Optional[int] = None
+    """the job id for the data collection, if not provided, a random one will be generated"""
     job_id_bias: NonNegativeInt = 0
     """the bias for the job id"""

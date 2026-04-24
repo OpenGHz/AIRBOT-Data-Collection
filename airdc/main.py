@@ -25,6 +25,8 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
     """
     if job_id is not None:
         job_id += config.job_id_bias
+    elif config.job_id is not None:
+        job_id = config.job_id + config.job_id_bias
     set_log_job_id(job_id)
     main_name = f"{PACKAGE_NAME}[{job_id}]" if job_id is not None else PACKAGE_NAME
     setproctitle(main_name)
