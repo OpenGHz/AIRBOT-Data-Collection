@@ -48,6 +48,10 @@ hydra:
 
   job:
     env_set:
+      # Stagger per-job startup to avoid EGL/GPU init races on the same device.
+      # Cumulative stagger: job 0->0s, job 1->8s, job 2->12s, job 3->14s,
+      # job 4->15s, and +1s per extra job after that.
+      _STAGGER: ${sleep_by_num:${hydra:job.num},8,2}
       # set environment variables for Graphics Library
       CUDA_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
       EGL_VISIBLE_DEVICES: ${floor_div:${hydra:job.num},2}
