@@ -4,12 +4,30 @@ import os
 import subprocess
 from pydantic import BaseModel, AliasChoices
 from threading import Lock
-from typing import List, Dict
+from typing import List, Dict, Optional
 from mcap_data_loader.utils.basic import get_items_by_ext, zip
 from mcap_data_loader.basis import StrEnum
 
 
 zip_equal = zip
+
+
+_job_id_prefix = ""
+_original_record_factory = logging.getLogRecordFactory()
+
+
+def _job_id_record_factory(*args, **kwargs):
+    record = _original_record_factory(*args, **kwargs)
+    record.job_id = _job_id_prefix
+    return record
+
+
+logging.setLogRecordFactory(_job_id_record_factory)
+
+
+def set_log_job_id(job_id: Optional[int], prefix: str = "") -> None:
+    global _job_id_prefix
+    _job_id_prefix = f"[{prefix}{job_id}] " if job_id is not None else ""
 
 
 class BaseModelWithFieldAliases(BaseModel):
@@ -37,9 +55,7 @@ class ColorfulFormatter(logging.Formatter):
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    format_str = (
-        "[%(levelname)s] %(asctime)s %(name)s: %(message)s (%(filename)s:%(lineno)d)"
-    )
+    format_str = "[%(levelname)s] %(asctime)s %(job_id)s%(name)s: %(message)s (%(filename)s:%(lineno)d)"
 
     FORMATS = {
         logging.DEBUG: grey + format_str + reset,
