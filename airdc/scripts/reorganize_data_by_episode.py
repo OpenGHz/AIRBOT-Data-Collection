@@ -245,14 +245,31 @@ def path_exists(path: Path) -> bool:
     return os.path.lexists(path)
 
 
+def _ignore_missing_on_rmtree(func, path, exc) -> None:
+    """rmtree onexc hook: swallow FileNotFoundError from concurrent deletion, re-raise others."""
+    if isinstance(exc, FileNotFoundError):
+        return
+    raise exc
+
+
 def remove_existing_path(path: Path) -> None:
-    """Remove an existing file, directory, or symlink."""
+    """Remove an existing file, directory, or symlink.
+
+    Tolerates concurrent deletion: if the path (or entries within a directory)
+    vanish mid-operation, treat that as success.
+    """
     if path.is_symlink() or path.is_file():
-        path.unlink()
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
         return
 
     if path.is_dir():
-        shutil.rmtree(path)
+        shutil.rmtree(path, onexc=_ignore_missing_on_rmtree)
+        return
+
+    if not path_exists(path):
         return
 
     raise RuntimeError("Unsupported existing path type: {}".format(path))
