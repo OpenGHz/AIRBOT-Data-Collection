@@ -11,7 +11,6 @@ from airdc.state_machine.fsm import (
     DemonstrateState,
 )
 from airdc.basis import PACKAGE_NAME
-from airdc.utils import set_log_job_id
 from mcap_data_loader.configurers.basis import main_argparse
 from typing import Optional
 
@@ -27,7 +26,7 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
         job_id += config.job_id_bias
     elif config.job_id is not None:
         job_id = config.job_id + config.job_id_bias
-    set_log_job_id(job_id)
+
     main_name = f"{PACKAGE_NAME}[{job_id}]" if job_id is not None else PACKAGE_NAME
     setproctitle(main_name)
     logger = getLogger(PACKAGE_NAME)
