@@ -252,6 +252,14 @@ def _ignore_missing_on_rmtree(func, path, exc) -> None:
     raise exc
 
 
+def _ignore_missing_on_rmtree_onerror(func, path, exc_info) -> None:
+    """Python <3.12 rmtree onerror hook equivalent to _ignore_missing_on_rmtree."""
+    exc = exc_info[1]
+    if isinstance(exc, FileNotFoundError):
+        return
+    raise exc
+
+
 def remove_existing_path(path: Path) -> None:
     """Remove an existing file, directory, or symlink.
 
@@ -266,7 +274,10 @@ def remove_existing_path(path: Path) -> None:
         return
 
     if path.is_dir():
-        shutil.rmtree(path, onexc=_ignore_missing_on_rmtree)
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(path, onexc=_ignore_missing_on_rmtree)
+        else:
+            shutil.rmtree(path, onerror=_ignore_missing_on_rmtree_onerror)
         return
 
     if not path_exists(path):
