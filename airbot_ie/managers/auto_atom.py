@@ -252,6 +252,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             if path.exists():
                 message.file_path = str(path.resolve())
                 self._current_message = message
+                if message.output_dir:
+                    Path(message.output_dir).mkdir(parents=True, exist_ok=True)
                 return message
             self.get_logger().warning(
                 f"Received file path does not exist: {path.resolve(strict=False)}. "
@@ -329,7 +331,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                             source_root=self._data_root,
                             output_root=reorg_dir,
                             overwrite=bool(episode_id),
-                            file_type="move",
+                            file_type="symlink",
                             episode=episode_args,
                         )
                     )

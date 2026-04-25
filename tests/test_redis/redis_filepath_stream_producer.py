@@ -90,7 +90,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-dir",
-        default="outputs/episode_0",
+        default="outputs/records/episode_0",
         help="Optional output directory to include in the message payload",
     )
     parser.add_argument(
