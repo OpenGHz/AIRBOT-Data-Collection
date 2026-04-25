@@ -19,9 +19,19 @@ job_id_bias: 0
 managers:
   auto_atom:
     env:
+      warmup: true
       to_numpy: true
       structured: false
       cameras:
+        - name: xfg_wrist_cam
+          width: ${cam_width}
+          height: ${cam_height}
+          enable_color: ${enable_color}
+          enable_depth: ${enable_depth}
+          enable_mask: ${enable_mask}
+          enable_heat_map: ${enable_heat_map}
+          parent_frame: eef_pose
+          is_static: false
         - name: env2_cam
           width: ${cam_width}
           height: ${cam_height}
@@ -44,7 +54,7 @@ sampler:
 hydra:
   sweeper:
     params:
-      door_name: door0,door1,door2,door3
+      door_name: door0,door1,door2
 
   job:
     env_set:
