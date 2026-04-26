@@ -110,19 +110,33 @@ def main() -> None:
         default=None,
         help="Approximate MAXLEN trimming value for XADD",
     )
+    parser.add_argument(
+        "--range",
+        type=int,
+        nargs=2,
+        metavar=("START", "END"),
+        help="Optional range of output directories to include in the message payload (e.g. --range 0 10)",
+    )
     args = parser.parse_args()
 
-    produce(
-        host=args.host,
-        port=args.port,
-        stream_key=args.stream_key,
-        field_name=args.field_name,
-        output_dir=args.output_dir,
-        file_paths=args.file_paths,
-        check_exists=not args.no_check,
-        interval=args.interval,
-        maxlen=args.maxlen,
-    )
+    if args.range:
+        start, end = args.range
+        output_dirs = [f"outputs/records/episode_{i}" for i in range(start, end)]
+    else:
+        output_dirs = [args.output_dir]
+    for output_dir in output_dirs:
+        produce(
+            host=args.host,
+            port=args.port,
+            stream_key=args.stream_key,
+            field_name=args.field_name,
+            output_dir=output_dir,
+            file_paths=args.file_paths,
+            check_exists=not args.no_check,
+            interval=args.interval,
+            maxlen=args.maxlen,
+        )
+        time.sleep(args.interval)
 
 
 if __name__ == "__main__":
