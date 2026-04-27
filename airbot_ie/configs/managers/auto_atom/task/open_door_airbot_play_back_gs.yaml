@@ -10,3 +10,4 @@ model_name: demo_gs_airbot_play
 door_name: door0
 bg3dgs_name: bg0
 door_side: ${managers.auto_atom.door_side}
+reverse: ${managers.auto_atom.reverse}
