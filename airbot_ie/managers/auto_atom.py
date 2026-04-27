@@ -340,8 +340,13 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             if not self._ack_current_message():
                 return True
             self._total_saved = 0
-            next_message = self._wait_for_valid_data_path()
-            self._runner.set_demo_path(mcap_path=next_message.file_path)
+            while True:
+                next_message = self._wait_for_valid_data_path()
+                if self._runner.set_demo_path(
+                    mcap_path=next_message.file_path, load=True
+                ):
+                    break
+
         return super().update()
 
     def on_shutdown(self):
