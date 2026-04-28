@@ -23,7 +23,7 @@ managers:
       to_numpy: true
       structured: false
       cameras:
-        - name: xfg_wrist_cam
+        - name: eef_wrist_cam
           width: ${cam_width}
           height: ${cam_height}
           enable_color: ${enable_color}
