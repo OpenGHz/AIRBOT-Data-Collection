@@ -78,6 +78,9 @@ class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
     reorganized_dir: Optional[Path] = None
     """Optional directory to save reorganized demonstration data. Missing output directories are created automatically."""
 
+    def model_post_init(self, context):
+        self.replay.load_on_initialize = False
+
 
 class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
     """Manager for discovering demonstration data from Redis Pub/Sub or Stream groups."""
@@ -95,9 +98,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         redis_cfg = config.redis_cfg
         self._connect_and_subscribe(redis_cfg.host, redis_cfg.port, redis_cfg.channel)
         # set initial demo path
-        self._wait_for_valid_data_path()
-        config.replay.mcap_path = self._current_message.file_path
         configured = super().on_configure()
+        self._update_data_path()
         data_roots = {fsm.dataset_config.absolute_directory.parent for fsm in self.fsms}
         if len(data_roots) != 1:
             raise ValueError(
@@ -285,6 +287,12 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             return True
         return False
 
+    def _update_data_path(self):
+        while True:
+            next_message = self._wait_for_valid_data_path()
+            if self._runner.set_demo_path(mcap_path=next_message.file_path, load=True):
+                break
+
     def update(self):
         config = self.config
         max_episodes = config.max_episodes
@@ -340,13 +348,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             if not self._ack_current_message():
                 return True
             self._total_saved = 0
-            while True:
-                next_message = self._wait_for_valid_data_path()
-                if self._runner.set_demo_path(
-                    mcap_path=next_message.file_path, load=True
-                ):
-                    break
-
+            self._update_data_path()
         return super().update()
 
     def on_shutdown(self):
