@@ -97,7 +97,9 @@ class ReorganizeDataByEpisodeConfig(BaseModel):
         description=(
             "Only reorganize one episode. Pass one value to keep the output name "
             "unchanged, or two values to rename the mapped episode, for example: "
-            "--episode 5 or --episode 5 eval_005."
+            "--episode 5 or --episode 5 eval_005. When a distinct output name is "
+            "given, a breadcrumb file named after the output name is written in "
+            "each source episode directory, recording the destination path."
         ),
     )
     """Optional source/output episode mapping."""
@@ -530,6 +532,34 @@ def execute_plan(
     return summary
 
 
+def write_source_breadcrumbs(
+    operations: Sequence[FileOperation],
+    episode_mapping: EpisodeMapping,
+    dry_run: bool,
+) -> None:
+    """Drop a marker file named after the output name in each source episode directory.
+
+    The marker filename is the output episode name and its contents are the
+    absolute destination path, so users can `ls` or `cat` it to trace where a
+    renamed source episode's contents were transferred to. No-ops when the
+    source and output names match.
+    """
+    if episode_mapping.source_name == episode_mapping.output_name:
+        return
+
+    for operation in operations:
+        marker_path = operation.source / episode_mapping.output_name
+        if dry_run:
+            logger.info("[BREADCRUMB] %s -> %s", marker_path, operation.destination)
+            continue
+        if not operation.source.is_dir():
+            continue
+        try:
+            marker_path.write_text("{}\n".format(operation.destination))
+        except OSError as exc:
+            logger.warning("Failed to write breadcrumb at %s: %s", marker_path, exc)
+
+
 def reorganize_data_by_episode(
     config: ReorganizeDataByEpisodeConfig,
 ) -> ExecutionSummary:
@@ -549,12 +579,19 @@ def reorganize_data_by_episode(
             episode_mapping.source_name,
             output_root / episode_mapping.output_name,
         )
-    return execute_plan(
+    summary = execute_plan(
         operations,
         overwrite=config.overwrite,
         dry_run=config.dry_run,
         file_type=config.file_type,
     )
+    if episode_mapping is not None:
+        write_source_breadcrumbs(
+            operations,
+            episode_mapping=episode_mapping,
+            dry_run=config.dry_run,
+        )
+    return summary
 
 
 def main(cli_args: Optional[Sequence[str]] = None) -> ExecutionSummary:
