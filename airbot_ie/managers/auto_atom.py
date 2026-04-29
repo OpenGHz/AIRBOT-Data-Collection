@@ -23,6 +23,7 @@ from airdc.scripts.reorganize_data_by_episode import (
     ReorganizeDataByEpisodeConfig,
     reorganize_data_by_episode,
 )
+from auto_atom.basis.mjc.gs_mujoco_env import BatchedGSUnifiedMujocoEnv
 
 
 class RedisConfig(BaseModel, frozen=True):
@@ -290,6 +291,18 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
     def _update_data_path(self):
         while True:
             next_message = self._wait_for_valid_data_path()
+            # # update the knob and lock
+            # env: BatchedGSUnifiedMujocoEnv = self._runner.get_env()
+            # body_gaussians = env.config.gaussian_render.body_gaussians
+            # handle_gs_frame = Path(body_gaussians["handle_gs_frame"])
+            # lock_gs_frame = Path(body_gaussians["lock_gs_frame"])
+            # body_gaussians.update(
+            #     {
+            #         "handle_gs_frame": str(handle_gs_frame.with_stem("real_knob2")),
+            #         "lock_gs_frame": str(lock_gs_frame.with_stem("real_lock2")),
+            #     }
+            # )
+            # env.update_gaussian_render(env.config.gaussian_render)
             if self._runner.set_demo_path(mcap_path=next_message.file_path, load=True):
                 break
 
