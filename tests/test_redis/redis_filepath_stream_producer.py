@@ -59,7 +59,12 @@ def produce(
     print(f"Appending to stream: {stream_key}\n")
 
     for idx, path in enumerate(normalized_paths):
-        payload = {field_name: str(path), "output_dir": output_dir or ""}
+        payload = {
+            field_name: str(path),
+            # field_name: "",
+            "output_dir": output_dir or "",
+            # "door_lock_id": "2",
+        }
         if maxlen is None:
             message_id = client.xadd(stream_key, payload)
         else:

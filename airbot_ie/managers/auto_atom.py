@@ -67,6 +67,8 @@ class RedisFilePathMessage:
     """Optional episode ID associated with the file path, if provided in the Redis message."""
     output_dir: Optional[str] = None
     """Optional output directory for reorganized data. When provided, existing links in that episode slot may be replaced."""
+    door_lock_id: Optional[str] = None
+    """The ID of the door lock in the environment, if applicable. """
 
 
 class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
@@ -93,6 +95,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self._stream_group_name = None
         self._stream_consumer_name = None
         self._current_message = None
+        self._door_lock_id = ""
 
     def on_configure(self):
         config = self.config
@@ -215,9 +218,10 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             for msg_id, data in msg_list:
                 data: dict
                 file_path = data.get(self.config.redis_cfg.channel)
-                if not file_path:
+                door_lock_id = data.get("door_lock_id")
+                if not file_path and not door_lock_id:
                     self.get_logger().warning(
-                        "Received Redis Stream message without a usable file path: "
+                        "Received Redis Stream message without a usable file path or door lock ID: "
                         f"id={msg_id}, data={data}. Leaving it pending."
                     )
                     continue
@@ -231,6 +235,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     ack_id=msg_id,
                     episode_id=episode_id,
                     output_dir=output_dir,
+                    door_lock_id=door_lock_id,
                 )
 
     def _waiting_for_data_path_once(self) -> RedisFilePathMessage:
@@ -251,17 +256,51 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self.get_logger().info("Waiting for demonstration data file path...")
         while True:
             message = self._waiting_for_data_path_once()
-            path = Path(message.file_path).expanduser()
-            if path.exists():
-                message.file_path = str(path.resolve())
-                self._current_message = message
-                if message.output_dir:
-                    Path(message.output_dir).mkdir(parents=True, exist_ok=True)
-                return message
-            self.get_logger().warning(
-                f"Received file path does not exist: {path.resolve(strict=False)}. "
-                "Waiting for next data..."
-            )
+            file_path = message.file_path
+            door_lock_id = message.door_lock_id
+            if door_lock_id and door_lock_id != self._door_lock_id:
+                # update the knob and lock
+                env: BatchedGSUnifiedMujocoEnv = self._runner.get_env()
+                body_gaussians = env.config.gaussian_render.body_gaussians
+                handle_gs_frame = Path(body_gaussians["handle_gs_frame"])
+                lock_gs_frame = Path(body_gaussians["lock_gs_frame"])
+                body_gaussians.update(
+                    {
+                        "handle_gs_frame": str(
+                            handle_gs_frame.with_stem(f"real_knob{door_lock_id}")
+                        ),
+                        "lock_gs_frame": str(
+                            lock_gs_frame.with_stem(f"real_lock{door_lock_id}")
+                        ),
+                    }
+                )
+                self._door_lock_id = door_lock_id
+                self.get_logger().info(
+                    f"Updating door lock ID to {door_lock_id} based on Redis message. "
+                    f"Waiting for next data with matching door lock ID..."
+                )
+                env.update_gaussian_render(env.config.gaussian_render)
+                # prepare resetting
+                if not file_path:
+                    env.reset()
+                    self.get_logger().info("Waiting for next data...")
+                    continue
+            if file_path:
+                path = Path(file_path).expanduser()
+                if path.exists():
+                    message.file_path = str(path.resolve())
+                    self._current_message = message
+                    if message.output_dir:
+                        Path(message.output_dir).mkdir(parents=True, exist_ok=True)
+                    return message
+                self.get_logger().warning(
+                    f"Received file path does not exist: {path.resolve(strict=False)}. "
+                    "Waiting for next data..."
+                )
+            else:
+                self.get_logger().warning(
+                    "Received empty file path. Waiting for next data..."
+                )
 
     def _ack_message(self, message: RedisFilePathMessage) -> bool:
         if not message.ack_id:
@@ -291,18 +330,6 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
     def _update_data_path(self):
         while True:
             next_message = self._wait_for_valid_data_path()
-            # # update the knob and lock
-            # env: BatchedGSUnifiedMujocoEnv = self._runner.get_env()
-            # body_gaussians = env.config.gaussian_render.body_gaussians
-            # handle_gs_frame = Path(body_gaussians["handle_gs_frame"])
-            # lock_gs_frame = Path(body_gaussians["lock_gs_frame"])
-            # body_gaussians.update(
-            #     {
-            #         "handle_gs_frame": str(handle_gs_frame.with_stem("real_knob2")),
-            #         "lock_gs_frame": str(lock_gs_frame.with_stem("real_lock2")),
-            #     }
-            # )
-            # env.update_gaussian_render(env.config.gaussian_render)
             if self._runner.set_demo_path(mcap_path=next_message.file_path, load=True):
                 break
 
