@@ -2,13 +2,13 @@ defaults:
   - basis
   - managers: auto_atom/basis
   - demonstrators: auto_atom/basis
-  - samplers: ros_struct
+  - samplers: mcap # ros_struct
   - _self_
   - override hydra/job_logging: custom
-  - override hydra/launcher: joblib  # or `add hydra/launcher=joblib` to the command line
+  - override hydra/launcher: joblib # or `add hydra/launcher=joblib` to the command line
 
+# disable all visualization
 visualizer: null
-
 managers:
   auto_atom:
     env:

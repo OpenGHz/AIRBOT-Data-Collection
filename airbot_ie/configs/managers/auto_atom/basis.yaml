@@ -8,7 +8,6 @@ defaults:
   - _self_
 
 assets_dir: third_party/auto-atomic-operation/assets
-# remove the env field since the env is created by the demonstrator
 managers:
   self_manager:
     _target_: airdc.managers.basis.SelfManager
@@ -16,7 +15,7 @@ managers:
   auto_atom:
     env:
       batch_size: ${batch_size}
-      structured: true
+      structured: false
 
 bg3dgs_dir: ${managers.auto_atom.bg3dgs_dir}
 bg3dgs_name: ${managers.auto_atom.bg3dgs_name}
@@ -26,3 +25,8 @@ scene_name: ${managers.auto_atom.scene_name}
 task_name: ${managers.auto_atom.task_name}
 operations: ${managers.auto_atom.env.operations}
 objects: ${managers.auto_atom.env.mask_objects}
+
+sampler:
+  encoder:
+    cfg:
+      frame_format: rgb24

@@ -2,14 +2,17 @@ from pydantic import PositiveInt
 from typing import Literal, List
 from time import time_ns
 from functools import cache
-from mcap_data_loader.serialization.video.pyav import AvCoderConfig
 from mcap_data_loader.utils.mcap_utils import MediaType
 from mcap_data_loader.serialization.flb import McapFlatBuffersWriter, FlatBuffersSchemas
 from airdc.common.samplers.mcap_samplers.basis import (
     McapDataSamplerBasis,
     McapDataSamplerBasisConfig,
 )
-from airdc.common.samplers.video_sampler import VideoSampler, VideoSamplerConfig
+from airdc.common.samplers.video_sampler import (
+    VideoEncoderConfig,
+    VideoSampler,
+    VideoSamplerConfig,
+)
 
 
 class McapFlbDataSamplerConfig(McapDataSamplerBasisConfig):
@@ -19,8 +22,8 @@ class McapFlbDataSamplerConfig(McapDataSamplerBasisConfig):
     """Initial size of the FlatBuffers builder."""
     video_save_to: Literal["file", "folder", "both"] = "file"
     """Where to save the video data: 'file' for MCAP attachment, 'folder' for separate folder, 'both' for both."""
-    av_coder: AvCoderConfig = AvCoderConfig()
-    """Configuration for the AV coder."""
+    encoder: VideoEncoderConfig = VideoEncoderConfig()
+    """Configuration for the video encoder."""
 
 
 class McapFlbDataSampler(McapDataSamplerBasis):
@@ -30,7 +33,7 @@ class McapFlbDataSampler(McapDataSamplerBasis):
         self.config = config
         self._video_sampler = VideoSampler(
             VideoSamplerConfig(
-                av_coder=config.av_coder,
+                encoder=config.encoder,
                 key_remap=config.key_remap,
                 encode_to_file=False,
             )

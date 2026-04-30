@@ -11,7 +11,9 @@ import csv
 class VideoEncoderConfig(BaseModel, frozen=True):
     """Configuration for the video coder."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        extra="forbid", arbitrary_types_allowed=True, validate_default=True
+    )
 
     cfg: Dict[str, Any] = {}
     """Configuration dictionary for the video coder. The specific keys depend on the implementation of the coder."""

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 from airdc.common.systems.basis import ActionConfig, InterfaceType, InterfaceKind
 from enum import Enum
 from pydantic import BaseModel, PositiveFloat, NonNegativeInt
@@ -40,7 +40,7 @@ class PoseControlBasis(ActionConfig):
 
     pose_reference_frame: str = ""
     """The reference frame for the pose control."""
-    fixed_orientation: Tuple[float, float, float, float] = ()
+    fixed_orientation: Optional[Tuple[float, float, float, float]] = None
     """The fixed orientation (as a quaternion) for the pose control."""
 
     @property
