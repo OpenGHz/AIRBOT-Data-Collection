@@ -52,9 +52,9 @@ sampler:
       fps: 20
 
 hydra:
-  sweeper:
-    params:
-      door_name: door0,door1,door2
+  # sweeper:
+  #   params:
+  #     door_name: door1,door2
 
   job:
     env_set:
