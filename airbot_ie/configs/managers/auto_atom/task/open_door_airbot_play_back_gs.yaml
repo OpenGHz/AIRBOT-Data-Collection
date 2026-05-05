@@ -7,9 +7,11 @@ defaults:
 robot_gs_dir: ${managers.auto_atom.robot_gs_dir}
 eef_gs_dir: ${managers.auto_atom.eef_gs_dir}
 model_name: demo_gs_airbot_play
-door_name: door1
-knob_name: knob1
-lock_name: lock1
-bg3dgs_name: bg0
+door_name: ${managers.auto_atom.door_name}
+knob_name: ${managers.auto_atom.knob_name}
+lock_name: ${managers.auto_atom.lock_name}
+bg3dgs_name: ${managers.auto_atom.bg3dgs_name}
+wall_name: ${managers.auto_atom.wall_name}
+inside_name: ${managers.auto_atom.inside_name}
 door_side: ${managers.auto_atom.door_side}
 reverse: ${managers.auto_atom.reverse}
