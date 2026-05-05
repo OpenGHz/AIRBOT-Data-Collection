@@ -454,7 +454,7 @@ def execute_plan(
         )
         if destination_status.reused_existing:
             reused_count += 1
-            logger.info(
+            logger.debug(
                 "[SKIP] {} already points to {}".format(
                     operation.destination,
                     operation.source,
