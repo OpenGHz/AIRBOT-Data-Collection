@@ -1,2 +1,0 @@
-jit_warmup:
-  _target_: airdc.callbacks.JitWarmupCallback

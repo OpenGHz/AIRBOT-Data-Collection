@@ -4,7 +4,6 @@ defaults:
   - override /managers/auto_atom/task: open_door_airbot_play_back_gs
   - override /managers/auto_atom/class: data_replay
   - override /samplers: video
-  - override hydra/callbacks: jit_warmup
   - _self_
 
 dataset:
@@ -53,6 +52,15 @@ sampler:
       fps: 20
 
 hydra:
+  callbacks:
+    # Pre-build gsplat's JIT-compiled CUDA extension once in the launcher
+    # process so joblib workers don't race on the shared torch_extensions
+    # cache (gsplat removes the build-dir lock on every import, which can
+    # clobber another worker's in-flight compile and cause `file too short`
+    # / missing-lock errors).
+    jit_warmup:
+      _target_: airdc.callbacks.JitWarmupCallback
+
   # sweeper:
   #   params:
   #     door_name: door1,door2

@@ -323,7 +323,15 @@ def create_relative_symlink(source: Path, destination: Path) -> None:
     """Create a relative symlink from destination to source, creating parent directories first."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     relative_target = os.path.relpath(source, start=destination.parent)
-    destination.symlink_to(relative_target)
+    try:
+        destination.symlink_to(relative_target)
+    except FileExistsError:
+        # Multirun siblings can race here: both pass ensure_destination
+        # while the destination is missing, then both call symlink_to.
+        # Accept the existing link if it already points where we want.
+        if destination.is_symlink() and os.readlink(destination) == relative_target:
+            return
+        raise
 
 
 def create_hardlink_tree(source: Path, destination: Path) -> Tuple[int, int]:
