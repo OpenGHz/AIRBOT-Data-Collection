@@ -4,6 +4,7 @@ defaults:
   - override /managers/auto_atom/task: open_door_airbot_play_back_gs
   - override /managers/auto_atom/class: data_replay
   - override /samplers: video
+  - override hydra/callbacks: jit_warmup
   - _self_
 
 dataset:
