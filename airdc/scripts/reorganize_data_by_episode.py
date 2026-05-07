@@ -104,6 +104,16 @@ class ReorganizeDataByEpisodeConfig(BaseModel):
     )
     """Optional source/output episode mapping."""
 
+    task_filter: Optional[List[str]] = Field(
+        None,
+        description=(
+            "Only reorganize specific tasks. When multiple tasks exist under "
+            "source_root (e.g., in multirun mode), this filters which tasks to process. "
+            "Pass task directory names to include, e.g., --task-filter door_0_0 door_1_0"
+        ),
+    )
+    """Optional task directory filter for multirun scenarios."""
+
     @model_validator(mode="after")
     def validate_episode(self) -> Self:
         """Validate the optional episode filter/rename argument."""
@@ -196,8 +206,19 @@ def collect_operations(
     source_root: Path,
     output_root: Path,
     episode_mapping: Optional[EpisodeMapping] = None,
+    task_filter: Optional[Sequence[str]] = None,
 ) -> List[FileOperation]:
-    """Collect all source-to-destination operations."""
+    """Collect all source-to-destination operations.
+
+    Args:
+        source_root: Root directory containing task directories
+        output_root: Output root directory
+        episode_mapping: Optional episode filter/rename mapping
+        task_filter: Optional list of task directory names to include
+
+    Returns:
+        List of FileOperation objects to execute
+    """
     if not source_root.exists() or not source_root.is_dir():
         raise FileNotFoundError(
             "Source root not found or not a directory: {}".format(source_root)
@@ -209,6 +230,10 @@ def collect_operations(
     )
 
     for task_dir in task_dirs:
+        # Filter tasks if task_filter is provided
+        if task_filter is not None and task_dir.name not in task_filter:
+            continue
+
         episode_dirs = sorted_entries(
             [path for path in task_dir.iterdir() if path.is_dir()]
         )
@@ -580,6 +605,7 @@ def reorganize_data_by_episode(
         source_root,
         output_root,
         episode_mapping=episode_mapping,
+        task_filter=config.task_filter,
     )
     if episode_mapping is not None:
         logger.info(
