@@ -42,6 +42,8 @@ managers:
           is_static: true
       enabled_sensors:
         - camera
+    # data_dir: third_party/auto-atomic-operation/data/replay
+    # reorganized_dir: data/aao_data_reorganized
 
 sampler:
   encoder:
