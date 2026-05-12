@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional, Union
 
-import redis
 from airdc.managers.auto_atom import (
     AutoAtomDataReplayConfig,
     AutoAtomDataReplayManager,
@@ -14,17 +13,26 @@ from airdc.managers.auto_atom import (
     State,
 )
 from pydantic import BaseModel, NonNegativeInt, ConfigDict, model_validator
-from redis.exceptions import (
-    ConnectionError as RedisConnectionError,
-    ResponseError,
-    TimeoutError,
-)
 from setproctitle import getproctitle
 from airdc.scripts.reorganize_data_by_episode import (
     ReorganizeDataByEpisodeConfig,
     reorganize_data_by_episode,
 )
 from auto_atom.basis.mjc.gs_mujoco_env import BatchedGSUnifiedMujocoEnv
+
+
+try:
+    import redis
+    from redis.exceptions import (
+        ConnectionError as RedisConnectionError,
+        ResponseError,
+        TimeoutError,
+    )
+except ImportError:
+    print(
+        "The `redis` package is required for Redis-based AutoAtom managers. "
+        "Please install it with `pip install redis`."
+    )
 
 
 class RedisConfig(BaseModel, frozen=True):
