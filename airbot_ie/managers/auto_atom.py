@@ -117,6 +117,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self._door_lock_id = ""
         self._consumed_paths: set[str] = set()
         self._recorded_names: set[str] = set()
+        self._reorganized_message_id: Optional[int] = None
 
     _CONSUMED_RECORD_FILENAME = ".consumed.json"
 
@@ -452,9 +453,53 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             if self._runner.set_demo_path(mcap_path=next_message.file_path, load=True):
                 break
 
-    def update(self):
+    def _reorganize_current_message(self):
         config = self.config
         max_episodes = config.max_episodes
+        output_dir = self._current_message.output_dir if self._current_message else None
+        if output_dir:
+            out_dir = Path(output_dir)
+            reorg_dir = out_dir.parent
+            episode_id = out_dir.name
+        else:
+            reorg_dir = config.reorganized_dir
+            episode_id = ""
+        if not reorg_dir:
+            return
+        if max_episodes != 1:
+            raise NotImplementedError(
+                "Reorganizing data by episode is only supported when max_episodes=1"
+            )
+        # NOTE: If a data replay fails, a retry should theoretically also fail, so the next one should proceed immediately. Therefore, different environments may have different output episodes corresponding to the same input episode_id. Currently, different environments theoretically correspond to the same physical process, only the rendering is different. Therefore, theoretically, there should not be a situation where some succeed and some fail.
+
+        # Process each FSM separately to avoid mixing data from different tasks in multirun mode
+        for fsm in self.fsms:
+            cur_episode = fsm.sample_info.episode - 1
+            episode_args = [str(cur_episode)]
+            if episode_id:
+                episode_args.append(episode_id)
+
+            # Extract task name from the FSM's data directory
+            # e.g., /data/home/haizhou/airdc/data/aao_data/door_0_0 -> door_0_0
+            fsm_data_dir = fsm.dataset_config.absolute_directory
+            task_name = (
+                fsm_data_dir.name
+                if isinstance(fsm_data_dir, Path)
+                else Path(fsm_data_dir).name
+            )
+
+            reorganize_data_by_episode(
+                ReorganizeDataByEpisodeConfig(
+                    source_root=self._data_root,
+                    output_root=reorg_dir,
+                    overwrite=bool(episode_id),
+                    file_type="symlink",
+                    episode=episode_args,
+                    task_filter=[task_name],
+                )
+            )
+
+    def update(self):
         # if max_episodes and self._total_saved >= max_episodes:
         if self._cur_done_count > 0:
             if self._cur_done_count != len(self.fsms):
@@ -470,47 +515,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             self.get_logger().info(
                 f"Total saved demonstrations: {self._total_saved}. Waiting for next data..."
             )
-            output_dir = self._current_message.output_dir
-            if output_dir:
-                out_dir = Path(output_dir)
-                reorg_dir = out_dir.parent
-                episode_id = out_dir.name
-            else:
-                reorg_dir = config.reorganized_dir
-                episode_id = ""
-            if reorg_dir:
-                if max_episodes != 1:
-                    raise NotImplementedError(
-                        "Reorganizing data by episode is only supported when max_episodes=1"
-                    )
-                # NOTE: If a data replay fails, a retry should theoretically also fail, so the next one should proceed immediately. Therefore, different environments may have different output episodes corresponding to the same input episode_id. Currently, different environments theoretically correspond to the same physical process, only the rendering is different. Therefore, theoretically, there should not be a situation where some succeed and some fail.
-
-                # Process each FSM separately to avoid mixing data from different tasks in multirun mode
-                for fsm in self.fsms:
-                    cur_episode = fsm.sample_info.episode - 1
-                    episode_args = [str(cur_episode)]
-                    if episode_id:
-                        episode_args.append(episode_id)
-
-                    # Extract task name from the FSM's data directory
-                    # e.g., /data/home/haizhou/airdc/data/aao_data/door_0_0 -> door_0_0
-                    fsm_data_dir = fsm.dataset_config.absolute_directory
-                    task_name = (
-                        fsm_data_dir.name
-                        if isinstance(fsm_data_dir, Path)
-                        else Path(fsm_data_dir).name
-                    )
-
-                    reorganize_data_by_episode(
-                        ReorganizeDataByEpisodeConfig(
-                            source_root=self._data_root,
-                            output_root=reorg_dir,
-                            overwrite=bool(episode_id),
-                            file_type="symlink",
-                            episode=episode_args,
-                            task_filter=[task_name],
-                        )
-                    )
+            self._reorganize_current_message()
+            self._reorganized_message_id = id(self._current_message)
             # self._runner.reset()
             # Treat max_episodes as the completion boundary for the current Redis task.
             if not self._ack_current_message():
@@ -520,6 +526,21 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         return super().update()
 
     def on_shutdown(self):
+        # Catch-up reorganize when the main loop terminates before the next update()
+        # tick (e.g., sample_limit.rounds caps the run right after a save).
+        if (
+            self._total_saved > 0
+            and self._current_message is not None
+            and id(self._current_message)
+            != getattr(self, "_reorganized_message_id", None)
+        ):
+            self.get_logger().info(
+                "Running pending reorganize on shutdown for current message."
+            )
+            try:
+                self._reorganize_current_message()
+            except Exception as exc:
+                self.get_logger().error(f"Pending reorganize on shutdown failed: {exc}")
         if self._pubsub:
             self._pubsub.unsubscribe()
             self._pubsub.close()
