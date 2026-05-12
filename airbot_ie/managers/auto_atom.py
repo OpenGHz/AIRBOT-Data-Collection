@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 import time
@@ -12,7 +13,7 @@ from airdc.managers.auto_atom import (
     DAction,
     State,
 )
-from pydantic import BaseModel, NonNegativeInt, ConfigDict
+from pydantic import BaseModel, NonNegativeInt, ConfigDict, model_validator
 from redis.exceptions import (
     ConnectionError as RedisConnectionError,
     ResponseError,
@@ -71,15 +72,33 @@ class RedisFilePathMessage:
     """The ID of the door lock in the environment, if applicable. """
 
 
+class DataExhausted(RuntimeError):
+    """Raised when the folder data source has no more files and exit-on-exhaustion is configured."""
+
+
 class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
     """Configuration for discovering the demonstration data"""
 
-    redis_cfg: RedisConfig
-    """Redis connection configuration"""
+    redis_cfg: Optional[RedisConfig] = None
+    """Redis connection configuration. Mutually exclusive with `data_dir`."""
+    data_dir: Optional[Path] = None
+    """Directory to read .mcap files from. Mutually exclusive with `redis_cfg`. Each file is consumed at most once per run, in sorted-name order."""
+    data_dir_on_exhausted: Literal["block", "exit"] = "block"
+    """Behavior when `data_dir` has no remaining files: 'block' polls for new files, 'exit' raises DataExhausted."""
+    data_dir_poll_interval_s: float = 1.0
+    """Seconds between directory scans when blocking on an empty/exhausted `data_dir`."""
     max_episodes: NonNegativeInt = 0
     """Maximum number of episodes to save before waiting for new data (default: 0, meaning no limit)"""
     reorganized_dir: Optional[Path] = None
     """Optional directory to save reorganized demonstration data. Missing output directories are created automatically."""
+
+    @model_validator(mode="after")
+    def _validate_data_source(self):
+        if self.redis_cfg is None and self.data_dir is None:
+            raise ValueError(
+                "At least one of `redis_cfg` or `data_dir` must be set on DiscoverAutoAtomDataReplayConfig."
+            )
+        return self
 
     def model_post_init(self, context):
         self.replay.load_on_initialize = False
@@ -96,11 +115,24 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self._stream_consumer_name = None
         self._current_message = None
         self._door_lock_id = ""
+        self._consumed_paths: set[str] = set()
+        self._recorded_names: set[str] = set()
+
+    _CONSUMED_RECORD_FILENAME = ".consumed.json"
 
     def on_configure(self):
         config = self.config
-        redis_cfg = config.redis_cfg
-        self._connect_and_subscribe(redis_cfg.host, redis_cfg.port, redis_cfg.channel)
+        if self._use_folder:
+            if config.redis_cfg is not None:
+                self.get_logger().info(
+                    f"`data_dir` is set ({config.data_dir}); ignoring `redis_cfg`."
+                )
+            self._load_recorded_names()
+        else:
+            redis_cfg = config.redis_cfg
+            self._connect_and_subscribe(
+                redis_cfg.host, redis_cfg.port, redis_cfg.channel
+            )
         # set initial demo path
         configured = super().on_configure()
         self._update_data_path()
@@ -115,8 +147,12 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         return configured
 
     @property
+    def _use_folder(self) -> bool:
+        return self.config.data_dir is not None
+
+    @property
     def _use_stream_group(self) -> bool:
-        return self.config.redis_cfg.mode == "stream_group"
+        return not self._use_folder and self.config.redis_cfg.mode == "stream_group"
 
     def _connect_and_subscribe(self, host: str, port: int, channel: str) -> None:
         retry_interval_s = 1.0
@@ -238,7 +274,90 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     door_lock_id=door_lock_id,
                 )
 
+    def _record_path(self) -> Path:
+        return self.config.data_dir / self._CONSUMED_RECORD_FILENAME
+
+    def _load_recorded_names(self) -> None:
+        record_path = self._record_path()
+        if not record_path.exists():
+            return
+        try:
+            with record_path.open() as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            self.get_logger().warning(
+                f"Failed to read consumed record at {record_path}: {e}. Starting fresh."
+            )
+            return
+        if isinstance(data, list):
+            self._recorded_names = {str(name) for name in data}
+            self.get_logger().info(
+                f"Loaded {len(self._recorded_names)} recorded entries from {record_path}"
+            )
+        else:
+            self.get_logger().warning(
+                f"Consumed record at {record_path} is not a JSON list; ignoring."
+            )
+
+    def _persist_recorded_names(self) -> None:
+        record_path = self._record_path()
+        tmp_path = record_path.with_suffix(record_path.suffix + ".tmp")
+        try:
+            record_path.parent.mkdir(parents=True, exist_ok=True)
+            with tmp_path.open("w") as f:
+                json.dump(sorted(self._recorded_names), f, indent=2)
+            tmp_path.replace(record_path)
+        except OSError as e:
+            self.get_logger().warning(
+                f"Failed to persist consumed record at {record_path}: {e}"
+            )
+
+    def _read_folder_message(self) -> RedisFilePathMessage:
+        data_dir = self.config.data_dir
+        poll_interval_s = max(self.config.data_dir_poll_interval_s, 0.0)
+        announced_empty = False
+        while True:
+            available = sorted(
+                p
+                for p in data_dir.glob("*.mcap")
+                if p.is_file() and str(p.resolve()) not in self._consumed_paths
+            )
+            unrecorded = [p for p in available if p.name not in self._recorded_names]
+            pool = unrecorded if unrecorded else available
+            if pool:
+                picked = pool[0]
+                resolved = str(picked.resolve())
+                self._consumed_paths.add(resolved)
+                is_new = picked.name not in self._recorded_names
+                if is_new:
+                    self._recorded_names.add(picked.name)
+                    self._persist_recorded_names()
+                self.get_logger().info(
+                    f"<- Picked file from {data_dir}: {resolved} "
+                    f"({'unrecorded' if is_new else 'replaying recorded'}; "
+                    f"{len(self._consumed_paths)} consumed this run)"
+                )
+                return RedisFilePathMessage(
+                    file_path=resolved,
+                    output_dir=self.config.reorganized_dir / picked.stem
+                    if self.config.reorganized_dir
+                    else None,
+                )
+            if self.config.data_dir_on_exhausted == "exit":
+                raise DataExhausted(
+                    f"data_dir {data_dir} has no more unconsumed .mcap files"
+                )
+            if not announced_empty:
+                self.get_logger().info(
+                    f"No unconsumed .mcap files in {data_dir}, polling every "
+                    f"{poll_interval_s:.1f}s..."
+                )
+                announced_empty = True
+            time.sleep(poll_interval_s)
+
     def _waiting_for_data_path_once(self) -> RedisFilePathMessage:
+        if self._use_folder:
+            return self._read_folder_message()
         if self._use_stream_group:
             return self._read_stream_group_message()
         channel = self.config.redis_cfg.channel
