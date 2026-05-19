@@ -320,6 +320,10 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             self.get_logger().warning(
                 f"Failed to persist consumed record at {record_path}: {e}"
             )
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def _read_folder_message(self) -> RedisFilePathMessage:
         data_dir = self.config.data_dir
