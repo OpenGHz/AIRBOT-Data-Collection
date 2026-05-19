@@ -1,0 +1,21 @@
+# @package _global_
+
+managers:
+  auto_atom:
+    data_dir: third_party/auto-atomic-operation/data/replay
+    reorganized_dir: data/aao_data_reorganized
+    env:
+      gaussian_render:
+        foreground_variant: true
+        randomize_background_on_reset: true
+        body_gaussians:
+          door_body:
+            - ${gs_dir}/door1.ply
+            - ${gs_dir}/door2.ply
+            - ${gs_dir}/door3.ply
+            - ${gs_dir}/door4.ply
+            - ${gs_dir}/door11.ply
+            - ${gs_dir}/door14.ply
+            - ${gs_dir}/door15.ply
+            - ${gs_dir}/door17.ply
+            - ${gs_dir}/door19.ply
