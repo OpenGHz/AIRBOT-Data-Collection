@@ -396,27 +396,53 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                 body_gaussians = env.config.gaussian_render.body_gaussians
                 handle_gs_frame = Path(body_gaussians["handle_gs_frame"])
                 lock_gs_frame = Path(body_gaussians["lock_gs_frame"])
-                body_gaussians.update(
-                    {
-                        "handle_gs_frame": str(
-                            handle_gs_frame.with_stem(f"real_knob{door_lock_id}")
-                        ),
-                        "lock_gs_frame": str(
-                            lock_gs_frame.with_stem(f"real_lock{door_lock_id}")
-                        ),
-                    }
-                )
-                self._door_lock_id = door_lock_id
-                self.get_logger().info(
-                    f"Updating door lock ID to {door_lock_id} based on Redis message. "
-                    f"Waiting for next data with matching door lock ID..."
-                )
-                env.update_gaussian_render(env.config.gaussian_render)
-                # prepare resetting
-                if not file_path:
-                    env.reset()
-                    self.get_logger().info("Waiting for next data...")
-                    continue
+                candidate_ids = [door_lock_id]
+                stripped_id = door_lock_id.lstrip("0")
+                if stripped_id and stripped_id != door_lock_id:
+                    candidate_ids.append(stripped_id)
+                new_handle = None
+                new_lock = None
+                attempted = []
+                for cid in candidate_ids:
+                    cand_handle = handle_gs_frame.with_stem(f"real_knob{cid}")
+                    cand_lock = lock_gs_frame.with_stem(f"real_lock{cid}")
+                    attempted.append((cid, cand_handle, cand_lock))
+                    if cand_handle.exists() and cand_lock.exists():
+                        new_handle = cand_handle
+                        new_lock = cand_lock
+                        break
+                if new_handle is None or new_lock is None:
+                    missing = [
+                        str(p)
+                        for _, h, lk in attempted
+                        for p in (h, lk)
+                        if not p.exists()
+                    ]
+                    self.get_logger().warning(
+                        f"Target door lock ply files not found for id={door_lock_id} "
+                        f"(tried {[cid for cid, _, _ in attempted]}): {missing}. "
+                        f"Keeping current door lock id={self._door_lock_id!r}."
+                    )
+                    if not file_path:
+                        continue
+                else:
+                    body_gaussians.update(
+                        {
+                            "handle_gs_frame": str(new_handle),
+                            "lock_gs_frame": str(new_lock),
+                        }
+                    )
+                    self._door_lock_id = door_lock_id
+                    self.get_logger().info(
+                        f"Updating door lock ID to {door_lock_id} based on Redis message. "
+                        f"Waiting for next data with matching door lock ID..."
+                    )
+                    env.update_gaussian_render(env.config.gaussian_render)
+                    # prepare resetting
+                    if not file_path:
+                        env.reset()
+                        self.get_logger().info("Waiting for next data...")
+                        continue
             if file_path:
                 path = Path(file_path).expanduser()
                 if path.exists():
