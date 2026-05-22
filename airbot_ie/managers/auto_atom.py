@@ -513,6 +513,36 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             if self._runner.set_demo_path(mcap_path=next_message.file_path, load=True):
                 break
 
+    def _episode_mp4s_ok(self, episode_dir: Path) -> bool:
+        """Return False if any .mp4 in *episode_dir* cannot be opened or
+        lacks a usable video stream with a positive duration. Sampler crashes
+        / killed encoder processes can leave behind truncated containers
+        whose moov atom never got flushed, which only blow up downstream
+        during training. Catching them here keeps such episodes out of the
+        reorganized tree."""
+        try:
+            import av
+        except ImportError:
+            self.get_logger().warning(
+                "PyAV not available; skipping mp4 validity check."
+            )
+            return True
+        for mp4 in sorted(episode_dir.glob("*.mp4")):
+            try:
+                container = av.open(str(mp4))
+                try:
+                    video_streams = [s for s in container.streams if s.type == "video"]
+                    if not video_streams:
+                        raise ValueError("no video stream")
+                    if not container.duration or container.duration <= 0:
+                        raise ValueError(f"non-positive duration {container.duration}")
+                finally:
+                    container.close()
+            except Exception as exc:
+                self.get_logger().error(f"Corrupt mp4 detected: {mp4} ({exc!r})")
+                return False
+        return True
+
     def _reorganize_current_message(self):
         config = self.config
         max_episodes = config.max_episodes
@@ -547,6 +577,15 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                 if isinstance(fsm_data_dir, Path)
                 else Path(fsm_data_dir).name
             )
+
+            episode_dir = Path(fsm_data_dir) / str(cur_episode)
+            if not self._episode_mp4s_ok(episode_dir):
+                self.get_logger().warning(
+                    f"Skipping reorganize for {task_name}/{cur_episode} "
+                    f"(-> {episode_id or cur_episode}) due to corrupt mp4(s); "
+                    f"source kept at {episode_dir}."
+                )
+                continue
 
             reorganize_data_by_episode(
                 ReorganizeDataByEpisodeConfig(
