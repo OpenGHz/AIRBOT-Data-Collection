@@ -558,6 +558,9 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     task_filter=[task_name],
                 )
             )
+        self.get_logger().info(
+            f"Reorganized {self._total_saved} episodes to {reorg_dir} "
+        )
 
     def update(self):
         # if max_episodes and self._total_saved >= max_episodes:
@@ -572,9 +575,9 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     if fsm.get_state() is State.sampling:
                         fsm.act(DAction.abandon)
             self._cur_done_count = 0
-            self.get_logger().info(
-                f"Total saved demonstrations: {self._total_saved}. Waiting for next data..."
-            )
+            # self.get_logger().info(
+            #     f"Total saved demonstrations: {self._total_saved}. Waiting for next data..."
+            # )
             self._reorganize_current_message()
             self._reorganized_message_id = id(self._current_message)
             # self._runner.reset()
