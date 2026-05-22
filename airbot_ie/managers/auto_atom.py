@@ -122,7 +122,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self._stream_group_name = None
         self._stream_consumer_name = None
         self._current_message = None
-        self._door_lock_id = ""
+        self._door_lock_id: Optional[str] = None
         self._consumed_paths: set[str] = set()
         self._recorded_names: set[str] = set()
         self._reorganized_message_id: Optional[int] = None
@@ -384,13 +384,36 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             pubsub.unsubscribe()
             pubsub.close()
 
+    @staticmethod
+    def _extract_lock_id_from_stem(stem: str, prefix: str) -> Optional[str]:
+        if stem.startswith(prefix):
+            suffix = stem[len(prefix) :]
+            return suffix or None
+        return None
+
     def _wait_for_valid_data_path(self) -> RedisFilePathMessage:
         self.get_logger().info("Waiting for demonstration data file path...")
         while True:
             message = self._waiting_for_data_path_once()
             file_path = message.file_path
             door_lock_id = message.door_lock_id
-            if door_lock_id and door_lock_id != self._door_lock_id:
+            if door_lock_id and self._door_lock_id is None:
+                env: BatchedGSUnifiedMujocoEnv = self._runner.get_env()
+                body_gaussians = env.config.gaussian_render.body_gaussians
+                initial_id = self._extract_lock_id_from_stem(
+                    Path(body_gaussians["handle_gs_frame"]).stem, "real_knob"
+                )
+                if initial_id is not None:
+                    self._door_lock_id = initial_id
+                    self.get_logger().info(
+                        f"Initial door lock ID resolved from config: {initial_id!r}"
+                    )
+            same_as_current = (
+                self._door_lock_id is not None
+                and door_lock_id is not None
+                and door_lock_id.lstrip("0") == self._door_lock_id.lstrip("0")
+            )
+            if door_lock_id and not same_as_current:
                 # update the knob and lock
                 env: BatchedGSUnifiedMujocoEnv = self._runner.get_env()
                 body_gaussians = env.config.gaussian_render.body_gaussians
@@ -435,7 +458,6 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     self._door_lock_id = door_lock_id
                     self.get_logger().info(
                         f"Updating door lock ID to {door_lock_id} based on Redis message. "
-                        f"Waiting for next data with matching door lock ID..."
                     )
                     env.update_gaussian_render(env.config.gaussian_render)
                     # prepare resetting
