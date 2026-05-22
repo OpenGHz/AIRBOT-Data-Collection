@@ -563,6 +563,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         # NOTE: If a data replay fails, a retry should theoretically also fail, so the next one should proceed immediately. Therefore, different environments may have different output episodes corresponding to the same input episode_id. Currently, different environments theoretically correspond to the same physical process, only the rendering is different. Therefore, theoretically, there should not be a situation where some succeed and some fail.
 
         # Process each FSM separately to avoid mixing data from different tasks in multirun mode
+        skipped_eps = set()
         for fsm in self.fsms:
             cur_episode = fsm.sample_info.episode - 1
             episode_args = [str(cur_episode)]
@@ -585,6 +586,7 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     f"(-> {episode_id or cur_episode}) due to corrupt mp4(s); "
                     f"source kept at {episode_dir}."
                 )
+                skipped_eps.add(episode_dir)
                 continue
 
             reorganize_data_by_episode(
@@ -597,9 +599,10 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     task_filter=[task_name],
                 )
             )
-        self.get_logger().info(
-            f"Reorganized {self._total_saved} episodes to {reorg_dir} "
-        )
+        log_str = f"Reorganized {self._total_saved - len(skipped_eps)} episodes to {reorg_dir}."
+        if skipped_eps:
+            log_str += f"Skipped: {skipped_eps}."
+        self.get_logger().info(log_str)
 
     def update(self):
         # if max_episodes and self._total_saved >= max_episodes:
