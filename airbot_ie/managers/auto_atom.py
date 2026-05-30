@@ -12,7 +12,7 @@ from airdc.managers.auto_atom import (
     DAction,
     State,
 )
-from pydantic import BaseModel, NonNegativeInt, ConfigDict, model_validator
+from pydantic import BaseModel, NonNegativeInt, PositiveInt, ConfigDict, model_validator
 from setproctitle import getproctitle
 from airdc.scripts.reorganize_data_by_episode import (
     ReorganizeDataByEpisodeConfig,
@@ -99,6 +99,8 @@ class DiscoverAutoAtomDataReplayConfig(AutoAtomDataReplayConfig):
     """Maximum number of episodes to save before waiting for new data (default: 0, meaning no limit)"""
     reorganized_dir: Optional[Path] = None
     """Optional directory to save reorganized demonstration data. Missing output directories are created automatically."""
+    repeats: PositiveInt = 1
+    """每条 mcap 在切下一条前重放的次数。save 与 abandon 都计一次。"""
 
     @model_validator(mode="after")
     def _validate_data_source(self):
@@ -126,6 +128,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
         self._consumed_paths: set[str] = set()
         self._recorded_names: set[str] = set()
         self._reorganized_message_id: Optional[int] = None
+        self._repeats_remaining: int = 0
+        self._repeat_index: int = 0
 
     _CONSUMED_RECORD_FILENAME = ".consumed.json"
 
@@ -512,6 +516,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             next_message = self._wait_for_valid_data_path()
             if self._runner.set_demo_path(mcap_path=next_message.file_path, load=True):
                 break
+        self._repeats_remaining = self.config.repeats
+        self._repeat_index = 0
 
     def _episode_mp4s_ok(self, episode_dir: Path) -> bool:
         """Return False if any .mp4 in *episode_dir* cannot be opened or
@@ -551,6 +557,8 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             out_dir = Path(output_dir)
             reorg_dir = out_dir.parent
             episode_id = out_dir.name
+            if self._repeat_index > 0:
+                episode_id = f"{episode_id}-r{self._repeat_index}"
         else:
             reorg_dir = config.reorganized_dir
             episode_id = ""
@@ -617,17 +625,24 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
                     if fsm.get_state() is State.sampling:
                         fsm.act(DAction.abandon)
             self._cur_done_count = 0
-            # self.get_logger().info(
-            #     f"Total saved demonstrations: {self._total_saved}. Waiting for next data..."
-            # )
             self._reorganize_current_message()
             self._reorganized_message_id = id(self._current_message)
-            # self._runner.reset()
-            # Treat max_episodes as the completion boundary for the current Redis task.
-            if not self._ack_current_message():
-                return True
+            self._repeats_remaining -= 1
             self._total_saved = 0
-            self._update_data_path()
+            if self._repeats_remaining > 0:
+                # Same mcap, next round. Don't ACK or pull a new file — FSMs
+                # transition back to active on the next tick and the parent's
+                # update() fires runner.reset() against the still-loaded demo.
+                self._repeat_index += 1
+                self.get_logger().info(
+                    f"Replaying current mcap "
+                    f"({self._repeat_index + 1}/{self.config.repeats})..."
+                )
+            else:
+                # Treat max_episodes as the completion boundary for the current Redis task.
+                if not self._ack_current_message():
+                    return True
+                self._update_data_path()
         return super().update()
 
     def on_shutdown(self):
