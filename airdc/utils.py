@@ -6,7 +6,7 @@ from threading import Lock
 from typing import List, Dict
 from mcap_data_loader.utils.basic import get_items_by_ext, zip
 from mcap_data_loader.utils.log import init_logging
-from mcap_data_loader.basis import StrEnum
+from cfgable import StrEnum
 
 
 zip_equal = zip

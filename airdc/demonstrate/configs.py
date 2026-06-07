@@ -23,7 +23,7 @@ from mcap_data_loader.utils.dict import (
     MergeValuesCallType,
     pass_through,
 )
-from mcap_data_loader.basis.cfgable import ConfigurableBasis
+from cfgable import ConfigurableBasis
 from functools import cache, cached_property
 
 

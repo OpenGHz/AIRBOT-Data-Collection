@@ -1,4 +1,4 @@
-from mcap_data_loader.utils.hydra_utils import hydra_instance_from_config_path
+from cfgable.hydra_utils import hydra_instance_from_config_path
 from airdc.common.utils.tk_keyboard import Listener
 
 
