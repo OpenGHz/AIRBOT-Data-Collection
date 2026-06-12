@@ -24,6 +24,7 @@
 
 - [本地开发运行手册](./runbooks/local-dev.md)
 - [MCAP 数据检查手册](./runbooks/inspect-mcap-dataset.md)
+- [固定目标台 pick_and_place ACT 复现手册](./runbooks/reproduce-pick-and-place-act.md)
 - [数据可视化：Foxglove](./visualize/foxglove.md)
 - [数据可视化：AIRBOT MCAP Data Viewer](./visualize/airbot.md)
 - [数据可视化：PlotJuggler](./visualize/plot_juggler.md)
