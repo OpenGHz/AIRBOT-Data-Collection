@@ -116,6 +116,9 @@ def test_episode_id_suffix_only_after_first_repeat(mock_logger, tmp_path):
     fsm = MagicMock()
     fsm.sample_info.episode = 1
     fsm.dataset_config.absolute_directory = tmp_path / "task"
+    # cur_episode = fsm.sample_info.episode - 1 == 0; the new guard requires
+    # the source episode dir to exist, so create it.
+    (tmp_path / "task" / "0").mkdir(parents=True)
     mgr.fsms = [fsm]
     mgr._total_saved = 1
 
@@ -153,6 +156,7 @@ def test_folder_mode_no_suffix(mock_logger, tmp_path):
     fsm = MagicMock()
     fsm.sample_info.episode = 1
     fsm.dataset_config.absolute_directory = tmp_path / "task"
+    (tmp_path / "task" / "0").mkdir(parents=True)
     mgr.fsms = [fsm]
     mgr._total_saved = 1
     mgr._data_root = tmp_path
@@ -172,6 +176,27 @@ def test_folder_mode_no_suffix(mock_logger, tmp_path):
 
     # Single-element episode arg (source only, no destination remap)
     assert all(len(ep) == 1 for ep in captured), captured
+
+
+@patch.object(DiscoverAutoAtomDataReplayManager, "get_logger")
+def test_missing_source_dir_is_skipped_not_crashed(mock_logger, tmp_path):
+    """mcap-only sampler never creates <task>/<episode>/; reorganize must skip."""
+    mgr = _make_manager(repeats=1, output_dir=None)
+    mgr.config = SimpleNamespace(
+        repeats=1, max_episodes=1, reorganized_dir=tmp_path / "reorg"
+    )
+    fsm = MagicMock()
+    fsm.sample_info.episode = 1
+    fsm.dataset_config.absolute_directory = tmp_path / "task"
+    # Deliberately do NOT mkdir <task>/0 — this is the mcap-only case.
+    mgr.fsms = [fsm]
+    mgr._total_saved = 1
+    mgr._data_root = tmp_path
+
+    with patch("airbot_ie.managers.auto_atom.reorganize_data_by_episode") as reorg_fn:
+        mgr._reorganize_current_message()  # must NOT raise
+
+    reorg_fn.assert_not_called()
 
 
 def test_positive_int_rejects_zero():

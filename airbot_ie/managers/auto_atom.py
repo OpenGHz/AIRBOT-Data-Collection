@@ -588,6 +588,19 @@ class DiscoverAutoAtomDataReplayManager(AutoAtomDataReplayManager):
             )
 
             episode_dir = Path(fsm_data_dir) / str(cur_episode)
+            if not episode_dir.is_dir():
+                # mcap-only sampler configs (video_save_to="file") never create
+                # a per-episode subdirectory — the whole episode lives inside
+                # <episode>.mcap. reorganize_data_by_episode requires a real
+                # source directory, so skip rather than crash. This is purely
+                # a no-op for "nothing to symlink", not a data loss.
+                self.get_logger().info(
+                    f"Skipping reorganize for {task_name}/{cur_episode} "
+                    f"(-> {episode_id or cur_episode}): no source directory at "
+                    f"{episode_dir} (mcap-only sampler — nothing to symlink)."
+                )
+                skipped_eps.add(episode_dir)
+                continue
             if not self._episode_mp4s_ok(episode_dir):
                 self.get_logger().warning(
                     f"Skipping reorganize for {task_name}/{cur_episode} "
