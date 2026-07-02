@@ -25,3 +25,6 @@ claude.md
 !.pixi/config.toml
 .cache/
 *.TXT
+.gitnexus
+.claude
+CLAUDE.md
