@@ -15,7 +15,6 @@
 - [数据流说明](docs/architecture/data-flow.md)
 - [本地开发运行手册](docs/runbooks/local-dev.md)
 - [MCAP 数据检查手册](docs/runbooks/inspect-mcap-dataset.md)
-- [ADR-001：配置驱动的模块化 Python + MCAP 架构](docs/decisions/001-config-driven-modular-runtime.md)
 
 ## 环境配置
 

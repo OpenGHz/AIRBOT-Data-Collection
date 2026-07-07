@@ -28,11 +28,8 @@
 - [数据可视化：AIRBOT MCAP Data Viewer](./visualize/airbot.md)
 - [数据可视化：PlotJuggler](./visualize/plot_juggler.md)
 - [常见问题](./troubleshooting/faq.md)
+- [日志与运行记录](./troubleshooting/logging.md)
 - [性能测试](./troubleshooting/performance.md)
-
-## 决策记录
-
-- [ADR-001：配置驱动的模块化 Python + MCAP 架构](./decisions/001-config-driven-modular-runtime.md)
 
 ## 规划信息
 
