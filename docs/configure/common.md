@@ -87,9 +87,21 @@ rgb_camera:
 
 除了默认采样器，还支持：
 
-- ROS-MCAP采样器：`airdc.common.samplers.mcap_sampler_ros.McapDataSamplerROS`。该采样器会根据`ROS_VERSION`环境变量选择相应版本的后端。各后端说明如下：
+#### MCAP-ROS采样器
+
+- 类：`airdc.common.samplers.mcap_sampler_ros.McapDataSamplerROS`。
+- 后端：该采样器会根据`ROS_VERSION`环境变量选择相应版本的后端。各后端说明如下：
   - ROS1：尽管ROS1本身不支持MCAP格式，但是其保存的MCAP文件可以支持`Foxglove`可视化以及通过`mcap-ros1-support`包读取。使用虚拟环境时，通常需额外安装以下依赖：`pip install rospkg catkin_pkg empy`。 <!-- codespell:ignore empy -->
   - ROS2：其保存的MCAP的消息格式与录制的Bag文件兼容。但需注意虚拟环境的Python版本需与ROS2版本对应的Python版本匹配。
+- 示例配置: `airbot_ie/configs/samplers/ros.yaml`
+
+#### MCAP-ROS-Struct采样器
+
+- 类：`airdc.common.samplers.mcap_samplers.sampler_ros_struct.McapDataSamplerROSStruct`。
+- 示例配置：`airbot_ie/configs/samplers/ros_struct.yaml`。
+- 适用场景：采集数据已经按ROS消息结构组织完成，输入数据的key即为最终写入MCAP的ROS topic，`data`字段为对应ROS消息的完整字典或可转换数组。
+- 与`MCAP-ROS`采样器的区别：该采样器不按`topic/field`拆分字段再拼接ROS消息，也不走FlatBuffers fallback；每个输入key会直接写成一个ROS消息topic。无法从topic名称推断ROS消息类型时，会按`std_msgs/Float32MultiArray`写入。
+- 常用自动类型映射：key末尾为`video_encoded`时按`foxglove_msgs/CompressedVideo`写入；`image_raw`和`heat_map`按`sensor_msgs/Image`写入；`rotation_angle`按`geometry_msgs/Vector3Stamped`写入；`points`按`sensor_msgs/PointCloud2`写入。其他topic通常需要末尾名称能映射到ROS消息名，例如`camera_info`、`pose`、`joint_state`、`transform`。
 
 ### 任务信息
 
@@ -97,7 +109,7 @@ rgb_camera:
 
 ### 独立保存视频文件
 
-为sampler增加配置：`video_save_to: folder`，这样视频数据将不保存到mcap文件中，而是独立保存为`.mp4`文件到文件夹中。
+为基于`McapFlbDataSampler`的sampler增加配置：`video_save_to: folder`，这样视频数据将不保存到mcap文件中，而是独立保存为`.mp4`文件到文件夹中。`MCAP-ROS-Struct`采样器不支持该字段，其`video_encoded`数据会写入MCAP中的ROS `CompressedVideo` topic。
 
 ### 视频编码参数
 

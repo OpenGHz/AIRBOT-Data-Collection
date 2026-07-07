@@ -55,6 +55,23 @@ auto-atom = ["auto-atomic-operation[mujoco,gs] ==0.2.3"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["airdc*", "airbot_ie*"]
+# pyproject's packages.find defaults to namespaces=true, so setuptools walks
+# every dir (os.walk followlinks=True). Prune non-package dirs to avoid the
+# infinite loop. These dirs never match `include`, so
+# excluding them changes the walk only, not the discovered package set.
+exclude = [
+  "third_party*",
+  "build*",
+  "dist*",
+  "data*",
+  "outputs*",
+  "multirun*",
+  "install*",
+  "airbot_logs*",
+  "docs*",
+  "tests*",
+  "scripts*",
+]
 
 [project.scripts]
 airdc = "airdc.main:main"
