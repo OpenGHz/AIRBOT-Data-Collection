@@ -3,7 +3,14 @@ import numpy as np
 import time
 from threading import Event
 from typing import Union, Optional
-from linuxpy.video.device import Capability, Device, PixelFormat, VideoCapture, Frame
+from linuxpy.video.device import (
+    BufferFlag,
+    Capability,
+    Device,
+    PixelFormat,
+    VideoCapture,
+    Frame,
+)
 from linuxpy.ctypes import timeval
 from turbojpeg import TurboJPEG
 from pydantic import field_validator, model_validator
@@ -196,9 +203,30 @@ class V4L2Camera(Sensor):
         self._visualizer = visualizer
 
     @staticmethod
-    def _get_stamp(frame: Frame):
+    def _get_stamp(frame: Frame) -> int:
         timestamp: timeval = frame.buff.timestamp
-        return timestamp.secs * int(1e9) + timestamp.usecs * int(1e3)
+        stamp_ns = timestamp.secs * int(1e9) + timestamp.usecs * int(1e3)
+        # V4L2 buffer timestamps use CLOCK_MONOTONIC (nanoseconds since boot), while the
+        # rest of airdc (joint_states stamp, log_time) uses wall clock via time.time_ns().
+        # Convert the monotonic capture instant to wall clock so every stamp shares one
+        # clock domain; otherwise image stamps are off by years relative to the rest.
+        #
+        # The offset is recomputed on every frame on purpose, not cached once:
+        #   - It is not constant. monotonic (adjtime slewing) and realtime (NTP steps /
+        #     manual changes) drift apart over time, so a cached offset goes stale on long
+        #     recordings.
+        #   - joint_states call time.time_ns() fresh each sample; recomputing keeps images
+        #     on the same wall clock even across an NTP step (a cached offset would diverge).
+        #   - Cost is negligible: clock_gettime is a vDSO read (~20-30ns, no syscall).
+        # The only thing lost is exact frame-to-frame monotonic deltas (sub-microsecond
+        # jitter between the two clock reads), which is irrelevant at 30-100Hz.
+        if (
+            frame.buff.flags & BufferFlag.TIMESTAMP_MASK
+            == BufferFlag.TIMESTAMP_MONOTONIC
+        ):
+            return stamp_ns + (time.time_ns() - time.monotonic_ns())
+        # Unknown/copied timestamp source (or driver left it unset): use wall clock now.
+        return time.time_ns()
 
     async def _read_frame(self):
         async for frame in self._capture:
