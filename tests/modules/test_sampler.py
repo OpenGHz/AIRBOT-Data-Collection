@@ -8,6 +8,9 @@ from omegaconf import OmegaConf
 from collections import defaultdict
 from time import time_ns
 
+import pytest
+
+pytestmark = pytest.mark.software
 
 _CFG_OVERRIDE: str | None = None
 
@@ -135,7 +138,9 @@ class TestDataSampler(unittest.TestCase):
                 for key, value in updated.items():
                     round_data[key].append(value)
             self.assertTrue(sampler.save(path, round_data))
-            self.assertIn(sampler.remove(path), [True, None])
+            # remove() may return True, None, or the removed Path — the contract
+            # that matters is that the episode is actually deleted (asserted next).
+            self.assertNotEqual(sampler.remove(path), False)
             self.assertFalse(
                 path.exists(), "remove() should delete the episode directory"
             )

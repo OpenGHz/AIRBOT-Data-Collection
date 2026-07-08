@@ -2,5 +2,7 @@
 ignore = ["F841", "F401"]
 exclude = [
     "airdc/common/utils/transformations.py",
-    "airdc/tests/*",
+    # Demo / manual scripts are exempt from linting; real tests are linted.
+    "tests/manual/*",
+    "airbot_ie/tests/manual/*",
 ]

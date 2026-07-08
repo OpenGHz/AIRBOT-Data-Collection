@@ -7,6 +7,12 @@ version = "0.1.0"
 
 [tasks]
 download-gs = "hf download OpenGHz/auto-atom-assets --repo-type=dataset --include 'assets/gs/*' --local-dir third_party/auto-atomic-operation/"
+# Software tests only: hardware/service-dependent cases auto-skip via conftest probes.
+test = "pytest -m software"
+# Force-run hardware/service tests (needs a real device or running service).
+test-hardware = "pytest -m hardware --run-hardware"
+# Everything collectable (hardware cases still auto-skip when absent).
+test-all = "pytest"
 
 [dependencies]
 ros-jazzy-ros-core = ">=0.11.0,<0.12"

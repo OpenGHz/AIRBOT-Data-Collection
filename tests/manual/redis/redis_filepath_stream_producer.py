@@ -63,7 +63,7 @@ def produce(
             field_name: str(path),
             # field_name: "",
             "output_dir": output_dir or "",
-            # "door_lock_id": "2",
+            "door_lock_id": "001",
         }
         if maxlen is None:
             message_id = client.xadd(stream_key, payload)

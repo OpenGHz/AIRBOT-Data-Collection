@@ -29,3 +29,31 @@ style-test:
     - pre-commit install
   script:
     - pre-commit run --all-files
+
+# Pure-software test gate. Hardware/service-dependent cases (realsense, camera,
+# gpu, redis, ros, display) auto-skip via the conftest probes, so this job needs
+# no physical devices — only the software dependencies.
+#
+# NOTE: the `python:3.10` image below almost certainly lacks the project's
+# heavier optional deps and system libs. Point `image:` at your CI registry (or
+# adjust the install step), then remove `allow_failure` to make this a hard gate.
+software-test:
+  stage: test
+  tags:
+    - linux/x86_64
+  image: python:3.10
+  allow_failure: true
+  variables:
+    PIP_INDEX_URL: "https://pypi.tuna.tsinghua.edu.cn/simple"
+    HTTP_PROXY: ${PROXY_URL}
+    http_proxy: ${PROXY_URL}
+    HTTPS_PROXY: ${PROXY_URL}
+    https_proxy: ${PROXY_URL}
+    ALL_PROXY: ${PROXY_URL}
+    all_proxy: ${PROXY_URL}
+    NO_PROXY: ${NO_PROXY_URL}
+    no_proxy: ${NO_PROXY_URL}
+  before_script:
+    - pip install -e ".[all]" natsort av "mcap-data-loader==0.3.0" pytest
+  script:
+    - pytest -m software -ra

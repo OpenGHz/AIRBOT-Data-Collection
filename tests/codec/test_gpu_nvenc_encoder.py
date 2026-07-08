@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from fractions import Fraction
 from io import BytesIO
 
@@ -7,9 +8,38 @@ import av
 import numpy as np
 import pytest
 
+# Marked hardware+gpu so the conftest probe auto-skips on non-GPU machines.
+# The inner skipif still guards the case where a GPU exists but NVENC is not
+# actually usable (codec missing, or listed-but-non-functional driver).
+pytestmark = [pytest.mark.hardware, pytest.mark.gpu]
 
+
+@functools.lru_cache(maxsize=None)
 def _has_nvenc(codec_name: str = "h264_nvenc") -> bool:
-    return codec_name in av.codecs_available
+    """True only if NVENC can *actually* encode.
+
+    A codec appearing in ``av.codecs_available`` does not guarantee the driver
+    can open it (e.g. ``avcodec_open2(h264_nvenc)`` may raise "Function not
+    implemented" on a box that has ``nvidia-smi`` but no usable NVENC). So we do
+    a tiny real encode and treat any failure as "not available".
+    """
+    if codec_name not in av.codecs_available:
+        return False
+    try:
+        buffer = BytesIO()
+        with av.open(buffer, mode="w", format="h264") as container:
+            stream = container.add_stream(codec_name, rate=30)
+            stream.width, stream.height, stream.pix_fmt = 16, 16, "yuv420p"
+            frame = av.VideoFrame.from_ndarray(
+                np.zeros((16, 16, 3), dtype=np.uint8), format="rgb24"
+            )
+            for _ in stream.encode(frame):
+                pass
+            for _ in stream.encode():
+                pass
+        return True
+    except Exception:
+        return False
 
 
 def _make_rgb_frame(index: int, width: int, height: int) -> np.ndarray:

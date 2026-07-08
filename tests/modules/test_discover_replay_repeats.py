@@ -5,10 +5,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from airbot_ie.managers.auto_atom import (
+# airbot_ie pulls in airbot_hardware_py transitively; skip cleanly where absent
+# (e.g. the pixi/ROS env) instead of erroring at collection.
+pytest.importorskip(
+    "airbot_ie.managers.auto_atom",
+    reason="airbot_ie 依赖未满足（如 airbot_hardware_py 未安装），跳过",
+)
+
+from airbot_ie.managers.auto_atom import (  # noqa: E402
     DiscoverAutoAtomDataReplayManager,
     RedisFilePathMessage,
 )
+
+pytestmark = pytest.mark.software
 
 
 def _make_manager(repeats, output_dir=None):

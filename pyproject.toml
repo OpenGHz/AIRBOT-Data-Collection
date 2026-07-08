@@ -76,3 +76,38 @@ exclude = [
 [project.scripts]
 airdc = "airdc.main:main"
 airdc-desktop = "airdc.main:main_desktop"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+# Only these two trees are collected. Anything else (generated outputs, the
+# vendored .pixi/third_party envs, demo scripts under */manual/) is pruned so a
+# bare `pytest` never wanders into non-test code or hangs on import-time scripts.
+testpaths = ["tests", "airbot_ie/tests"]
+norecursedirs = [
+    "manual",
+    "outputs",
+    "out",
+    "fixtures",
+    "data",
+    ".pixi",
+    "third_party",
+    "build",
+    "dist",
+    "*.egg-info",
+    "__pycache__",
+]
+# -ra: summary of skips/xfails so the "why was this skipped" reason is visible.
+# --strict-markers: an unregistered marker is an error, not a silent no-op.
+addopts = "-ra --strict-markers"
+markers = [
+    "software: 纯软件测试，无需任何硬件或外部服务（CI 默认目标，任何环境都应通过）",
+    "hardware: 需要真实硬件或运行中的外部服务；探针缺失时由 conftest 自动 skip（不报 Failed）",
+    "realsense: 需要 Intel RealSense 相机",
+    "camera: 需要 /dev/video* 摄像头（v4l2 / USB）",
+    "gpu: 需要 NVIDIA GPU（nvenc / cuda）",
+    "redis: 需要可连接的本地 Redis 服务（localhost:6379）",
+    "ros: 需要 ROS 环境（cv_bridge 等），建议在 pixi 环境运行",
+    "display: 需要图形显示（$DISPLAY / $WAYLAND_DISPLAY）",
+    "slow: 耗时 / 基准测试，默认不跑（用 -m slow 显式选择）",
+    "manual: 交互 / 演示脚本，默认不收集（用 --run-manual 才收集）",
+]

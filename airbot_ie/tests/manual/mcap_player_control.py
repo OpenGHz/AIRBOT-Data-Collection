@@ -1,3 +1,8 @@
+# NOTE (broken dependency): this manual script imports `McapSinglePosePlayer`
+# from `airdc.tests.test_mcap_player`, a module that no longer exists anywhere in
+# the repo (the whole `airdc/tests/` tree is gone). It is quarantined here as a
+# manual/hardware script and is NOT collected by pytest. To run it again, restore
+# or reimplement `McapSinglePosePlayer` and fix the import below.
 if __name__ == "__main__":
     import argparse
     from airdc.tests.test_mcap_player import McapSinglePosePlayer
