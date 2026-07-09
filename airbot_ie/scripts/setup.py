@@ -123,6 +123,13 @@ class SetupConfig(BaseModelWithFieldAliases):
         description="Whether to use concurrent camera instantiation.",
         validation_alias="cc",
     )
+    skip_arm: bool = Field(
+        False,
+        description=(
+            "Skip robotic arm configuration: no CAN detection/binding and no arm "
+            "instances in the generated config (camera-only setup)."
+        ),
+    )
 
 
 args = CliApp.run(SetupConfig)
@@ -161,66 +168,88 @@ CAN_NAME_MAPPINGS = (
     }
 )
 
-"""Process CAN Interfaces"""
+"""Process CAN Interfaces / Robotic Arms"""
 
-can_itfs = args.can_interfaces or sorted(
-    set(get_can_interfaces()) - set(args.ignore_cans)
-)
-logger.info(f"CAN interfaces: {can_itfs}")
-can_num = len(can_itfs)
-if can_num not in CAN_NAME_MAPPINGS:
-    raise ValueError(f"Not correct can number: {can_itfs} for drag={args.drag}")
-arm_names = (
-    ["lead", "follow"] * (can_num // 2)
-    if not args.drag
-    else {1: [""], 2: ["left", "right"]}[can_num]
-)
-arm_groups = (
-    {
-        2: ["/"] * can_num,
-        4: ["left"] * 2 + ["right"] * 2,
-    }[can_num]
-    if not args.drag
-    else ["/"] * can_num
-)
-arm_roles = ["l", "f"] * (can_num // 2) if not args.drag else ["l"] * can_num
+if not args.skip_arm:
+    can_itfs = args.can_interfaces or sorted(
+        set(get_can_interfaces()) - set(args.ignore_cans)
+    )
+    logger.info(f"CAN interfaces: {can_itfs}")
+    can_num = len(can_itfs)
+    if can_num not in CAN_NAME_MAPPINGS:
+        raise ValueError(f"Not correct can number: {can_itfs} for drag={args.drag}")
+    arm_names = (
+        ["lead", "follow"] * (can_num // 2)
+        if not args.drag
+        else {1: [""], 2: ["left", "right"]}[can_num]
+    )
+    arm_groups = (
+        {
+            2: ["/"] * can_num,
+            4: ["left"] * 2 + ["right"] * 2,
+        }[can_num]
+        if not args.drag
+        else ["/"] * can_num
+    )
+    arm_roles = ["l", "f"] * (can_num // 2) if not args.drag else ["l"] * can_num
+else:
+    logger.info(Bcolors.cyan("Skipping robotic arm configuration (--skip-arm)."))
+    can_itfs = []
+    can_num = 0
+    arm_names = []
+    arm_groups = []
+    arm_roles = []
 
+# Link the bus/name mapping for this arm count into the station config so that
+# camera names configured below are persisted on save. `defaultdict` only shares
+# references for pre-existing counts, so a brand-new count (e.g. the arm-less `0`)
+# must be inserted into `station_config` explicitly to survive the yaml dump.
+if can_num not in station_config["bus_name_mapping"]:
+    station_config["bus_name_mapping"][can_num] = {}
+    BUS_NAME_MAPPINGS[can_num] = station_config["bus_name_mapping"][can_num]
 if hw_uuid not in BUS_NAME_MAPPINGS[can_num]:
     BUS_NAME_MAPPINGS[can_num][hw_uuid] = {}
 bus_name_mapping: dict = BUS_NAME_MAPPINGS[can_num][hw_uuid]
-target_cans = CAN_NAME_MAPPINGS[can_num]
-name_choices = NAME_CHOICES[can_num]
+# Without arms there is no arm count to key camera names on, so offer the union
+# of every known name choice for the current mode.
+name_choices = (
+    NAME_CHOICES[can_num]
+    if not args.skip_arm
+    else sorted({name for names in NAME_CHOICES.values() for name in names})
+)
 
-if set(target_cans) != set(can_itfs):
-    logger.info(
-        Bcolors.cyan(
-            f"Binding CAN group {can_itfs} to target interfaces {target_cans}..."
+if not args.skip_arm:
+    target_cans = CAN_NAME_MAPPINGS[can_num]
+    if set(target_cans) != set(can_itfs):
+        logger.info(
+            Bcolors.cyan(
+                f"Binding CAN group {can_itfs} to target interfaces {target_cans}..."
+            )
         )
-    )
-    execute_shell_script(
-        f"{cur_dir}/bind_can_udev.sh",
-        args=[
-            "--target",
-            *target_cans,
-        ],
-        with_sudo=True,
-    )
-    # TODO: detect whether the CAN interfaces are bound correctly
-    logger.info(
-        Bcolors.cyan(
-            "Please reconnect the robotic arms and press `Enter` to continue..."
+        execute_shell_script(
+            f"{cur_dir}/bind_can_udev.sh",
+            args=[
+                "--target",
+                *target_cans,
+            ],
+            with_sudo=True,
         )
-    )
-    input()
-    logger.info("Waiting for the system to stabilize after reconnection...")
-    time.sleep(4)
-    if check_can_interfaces(target_cans):
-        logger.info(Bcolors.green("Successfully bound."))
+        # TODO: detect whether the CAN interfaces are bound correctly
+        logger.info(
+            Bcolors.cyan(
+                "Please reconnect the robotic arms and press `Enter` to continue..."
+            )
+        )
+        input()
+        logger.info("Waiting for the system to stabilize after reconnection...")
+        time.sleep(4)
+        if check_can_interfaces(target_cans):
+            logger.info(Bcolors.green("Successfully bound."))
+        else:
+            logger.error("Failed to bind. Please check the connections.")
+            exit(1)
     else:
-        logger.error("Failed to bind. Please check the connections.")
-        exit(1)
-else:
-    logger.info(f"CAN {can_itfs} already bound correctly.")
+        logger.info(f"CAN {can_itfs} already bound correctly.")
 
 """Process Cameras"""
 
@@ -427,27 +456,29 @@ while True:
     elif key == ord("s"):
         with open(ref_cfg_path) as f:
             config: dict = yaml.load(f)
-            ref_arm_cfg_name = args.ref_arm_cfg_name
-            cfg_name = None
             print(pformat(config))
-            if not ref_arm_cfg_name:
-                for cfg in config.get("defaults", []):
-                    if isinstance(cfg, dict):
-                        cfg_name = cfg.get("/robots")
-                        if cfg_name is not None:
-                            break
-            ref_arm_cfg_name = ref_arm_cfg_name or cfg_name or "airbot_play"
-            logger.info(f"Using arm ref cfg name: {ref_arm_cfg_name}")
-            if ref_arm_cfg_name:
+            arm_instances: list = []
+            if can_itfs:
+                ref_arm_cfg_name = args.ref_arm_cfg_name
+                cfg_name = None
+                if not ref_arm_cfg_name:
+                    for cfg in config.get("defaults", []):
+                        if isinstance(cfg, dict):
+                            cfg_name = cfg.get("/robots")
+                            if cfg_name is not None:
+                                break
+                ref_arm_cfg_name = ref_arm_cfg_name or cfg_name or "airbot_play"
+                logger.info(f"Using arm ref cfg name: {ref_arm_cfg_name}")
                 arm_ref_cfg_path = args.ref_arm_cfg_dir / Path(
                     ref_arm_cfg_name
                 ).with_suffix(".yaml")
                 with open(arm_ref_cfg_path) as f:
                     arm_ref_cfg = yaml.load(f)
-            components: Dict[str, list] = {
-                "instances": [
+                arm_instances = [
                     (arm_ref_cfg | {"port": 50050 + i}) for i in range(len(can_itfs))
                 ]
+            components: Dict[str, list] = {
+                "instances": arm_instances
                 + [
                     {"camera_index": bus} | camera_params.get(bus, {})
                     for bus in cfged_bus_serials
