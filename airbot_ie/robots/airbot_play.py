@@ -489,6 +489,11 @@ class AIRBOTPlay(System):
                 "E2B": x_pos(0.1488995),
             },
         }
+        # play_pro / play_lite share the same ref->eef offsets as play. Without
+        # these the frames are missing and cross-eef lookups (e.g. lead E2B ->
+        # follow G2) return None, which later breaks is_identity_matrix.
+        tf_dict["play_pro"] = tf_dict["play"]
+        tf_dict["play_lite"] = tf_dict["play"]
         tf_list = [("replay.PE2", "play.E2B", iden_rela_pose)]
         for arm_type, pos_rela in tf_dict.items():
             for eef_type, tf_part in pos_rela.items():

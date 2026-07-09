@@ -574,7 +574,7 @@ while True:
             logger.info(f"Components: {pformat(components)}")
             param_dict["components"] = components
             # config["defaults"].append(
-            #     {"post_capture@demonstrator.instance": str(can_num)}
+            #     {"post_capture@demonstrator": str(can_num)}
             # )
         # post_capture_path = f"{ref_cfg_dir}/post_capture/{can_num}.yaml"
         # with open(post_capture_path) as f:

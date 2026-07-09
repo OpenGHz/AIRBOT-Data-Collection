@@ -38,8 +38,8 @@ python3 airbot_ie/scripts/setup.py --ic <bus_id> --ii <can_id> --rcd <ref_config
 
 ## 手动调整
 
-若不使用夹爪，请在配置中的`demonstrator.instance.components.instances`列表中各元素增加`components`字段并设置为列表：`[arm]`。
+若不使用夹爪，请在配置中的`demonstrator.components.instances`列表中各元素增加`components`字段并设置为列表：`[arm]`。
 
 其他常见的配置调整说明请参考[常见配置调整](../configure/common.md)。
 
-注意：配置文件的生成基于给定的参考配置文件，主要是覆写了`demonstrator.instance`字段下的`components`参数，为防止重新生成配置后覆盖，建议不要仅修改`setup.yaml`，而是同步修改上述参考配置文件，这样重新生成配置时不会丢失修改。
+注意：配置文件的生成基于给定的参考配置文件，主要是覆写了`demonstrator`字段下的`components`参数，为防止重新生成配置后覆盖，建议不要仅修改`setup.yaml`，而是同步修改上述参考配置文件，这样重新生成配置时不会丢失修改。

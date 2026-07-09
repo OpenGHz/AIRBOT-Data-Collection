@@ -39,7 +39,7 @@ ChArUco 标定板同时可支持内参和外参标定，省去了额外打印标
 #### 内参
 
 ```bash
-airdc +demonstrator.instance.components.ignore_roles="[l,f]" samplers=video_each +dataset.root=scripts/calibration/camera/calibration/ dataset.directory=intrinsic
+airdc +demonstrator.components.ignore_roles="[l,f]" samplers=video_each +dataset.root=scripts/calibration/camera/calibration/ dataset.directory=intrinsic
 ```
 
 上述命令会同时启动多个相机，但会依次采集每个相机的视频数据，采集顺序与配置文件中相机的顺序一致。
@@ -83,7 +83,7 @@ airdc +demonstrator.instance.components.ignore_roles="[l,f]" samplers=video_each
 这里标定的是多个相机之间的相对外参关系，而不是相机与机械臂等其他设备的外参关系。
 
 ```bash
-airdc +demonstrator.instance.components.ignore_roles="[l,f]" samplers=video_once +dataset.root=scripts/calibration/camera/calibration/ dataset.directory=extrinsic
+airdc +demonstrator.components.ignore_roles="[l,f]" samplers=video_once +dataset.root=scripts/calibration/camera/calibration/ dataset.directory=extrinsic
 ```
 
 上述命令会同时启动多个相机，并同时采集所有相机的视频数据。多次重复录制会覆盖之前的数据。完成后，将会在`dataset.directory`指定的目录下找到每个相机的视频文件，命名规则与前述内参标定时一致。

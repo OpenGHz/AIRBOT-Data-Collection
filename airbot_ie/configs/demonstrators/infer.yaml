@@ -15,7 +15,7 @@ demonstrator:
   _target_: airdc.common.demonstrators.wrapped.WrappedDemonstrator
   environment:
     _target_: airdc.common.environments.grouped.GroupedEnvironment
-    components: ${_setup.demonstrator.instance.components}
+    components: ${_setup.demonstrator.components}
   caller:
     _target_: airdc.common.callers.policy.PolicyEvaluationCaller
   wrappers:
