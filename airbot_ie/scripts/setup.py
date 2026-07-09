@@ -130,6 +130,15 @@ class SetupConfig(BaseModelWithFieldAliases):
             "instances in the generated config (camera-only setup)."
         ),
     )
+    arm_urls: List[str] = Field(
+        [],
+        validation_alias="au",
+        description=(
+            "Configure arms by explicit endpoints (host or host:port per arm, e.g. "
+            "'192.168.1.100' or 'localhost:50050') instead of CAN. Skips CAN "
+            "detection/binding and writes each address to the arm's URL/IP field."
+        ),
+    )
 
 
 args = CliApp.run(SetupConfig)
@@ -168,16 +177,38 @@ CAN_NAME_MAPPINGS = (
     }
 )
 
-"""Process CAN Interfaces / Robotic Arms"""
+"""Process Robotic Arms (explicit URL/IP endpoints, CAN interfaces, or skip)"""
 
-if not args.skip_arm:
+# Parsed explicit arm endpoints as (host, port|None); only used in URL/IP mode.
+arm_addresses: list[tuple[str, "int | None"]] = []
+can_itfs: list[str] = []
+# Explicit endpoints take precedence over --skip-arm (they configure arms).
+configure_arms = bool(args.arm_urls) or not args.skip_arm
+
+if args.arm_urls:
+    # Explicit endpoints: skip CAN detection/binding and build the arm config
+    # directly from the given URLs/IPs (host or host:port per arm).
+    logger.info(Bcolors.cyan(f"Using explicit arm endpoints: {args.arm_urls}"))
+    for addr in args.arm_urls:
+        host, sep, port = addr.partition(":")
+        arm_addresses.append((host, int(port) if sep and port else None))
+    can_num = len(arm_addresses)
+elif not args.skip_arm:
     can_itfs = args.can_interfaces or sorted(
         set(get_can_interfaces()) - set(args.ignore_cans)
     )
     logger.info(f"CAN interfaces: {can_itfs}")
     can_num = len(can_itfs)
+else:
+    logger.info(Bcolors.cyan("Skipping robotic arm configuration (--skip-arm)."))
+    can_num = 0
+
+if configure_arms:
     if can_num not in CAN_NAME_MAPPINGS:
-        raise ValueError(f"Not correct can number: {can_itfs} for drag={args.drag}")
+        raise ValueError(
+            f"Not correct arm number: {can_num} for drag={args.drag} "
+            f"(can_itfs={can_itfs}, arm_urls={args.arm_urls})"
+        )
     arm_names = (
         ["lead", "follow"] * (can_num // 2)
         if not args.drag
@@ -193,9 +224,6 @@ if not args.skip_arm:
     )
     arm_roles = ["l", "f"] * (can_num // 2) if not args.drag else ["l"] * can_num
 else:
-    logger.info(Bcolors.cyan("Skipping robotic arm configuration (--skip-arm)."))
-    can_itfs = []
-    can_num = 0
     arm_names = []
     arm_groups = []
     arm_roles = []
@@ -214,11 +242,12 @@ bus_name_mapping: dict = BUS_NAME_MAPPINGS[can_num][hw_uuid]
 # of every known name choice for the current mode.
 name_choices = (
     NAME_CHOICES[can_num]
-    if not args.skip_arm
+    if configure_arms
     else sorted({name for names in NAME_CHOICES.values() for name in names})
 )
 
-if not args.skip_arm:
+# CAN binding only applies to real CAN interfaces, not URL/IP endpoints.
+if configure_arms and not args.arm_urls:
     target_cans = CAN_NAME_MAPPINGS[can_num]
     if set(target_cans) != set(can_itfs):
         logger.info(
@@ -384,6 +413,7 @@ logger.info(
         + "\nNote: Click any of the image windows and then press the key"
     )
 )
+saved = False
 while True:
     for camera, vis_key, visualizer in zip(cameras, camera_vis_keys, visualizers):
         obs = camera.capture_observation(2.0)
@@ -392,6 +422,11 @@ while True:
         visualizer.update({vis_key: obs}, None)
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q") or key == 27:  # ESC or 'q' to quit
+        if not saved:
+            logger.warning(
+                "Exiting without saving the configuration (press `s` to save). "
+                "You can ignore this warning if you indeed do not need to save."
+            )
         logger.info("Exiting setup script.")
         break
     elif key == ord("c"):
@@ -458,7 +493,7 @@ while True:
             config: dict = yaml.load(f)
             print(pformat(config))
             arm_instances: list = []
-            if can_itfs:
+            if can_num:
                 ref_arm_cfg_name = args.ref_arm_cfg_name
                 cfg_name = None
                 if not ref_arm_cfg_name:
@@ -474,9 +509,20 @@ while True:
                 ).with_suffix(".yaml")
                 with open(arm_ref_cfg_path) as f:
                     arm_ref_cfg = yaml.load(f)
-                arm_instances = [
-                    (arm_ref_cfg | {"port": 50050 + i}) for i in range(len(can_itfs))
-                ]
+                if arm_addresses:
+                    # Write each endpoint to the arm's address field: `ip` for arm
+                    # types that use it (e.g. mmk), otherwise `url`; keep the port
+                    # from the address when given, else the reference cfg default.
+                    addr_key = "ip" if "ip" in arm_ref_cfg else "url"
+                    for host, port in arm_addresses:
+                        override = {addr_key: host}
+                        if port is not None:
+                            override["port"] = port
+                        arm_instances.append(arm_ref_cfg | override)
+                else:
+                    arm_instances = [
+                        (arm_ref_cfg | {"port": 50050 + i}) for i in range(can_num)
+                    ]
             components: Dict[str, list] = {
                 "instances": arm_instances
                 + [
@@ -505,6 +551,7 @@ while True:
         with open(ref_cfg_dir / "setup.yaml", "w") as f:
             yaml.dump(config, f)
         logger.info(Bcolors.green("Setup completed successfully."))
+        saved = True
         break
 cv2.destroyAllWindows()
 
