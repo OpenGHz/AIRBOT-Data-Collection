@@ -73,6 +73,23 @@ def check_can_interfaces(expected_interfaces: list[str]) -> bool:
         return False
 
 
+def get_machine_id() -> str:
+    """Return a stable, machine-unique id without requiring sudo.
+
+    Reads `/etc/machine-id` (falling back to `/var/lib/dbus/machine-id`), which is
+    world-readable and stable per host, unlike the DMI product UUID that needs
+    `sudo dmidecode`.
+    """
+    for path in (Path("/etc/machine-id"), Path("/var/lib/dbus/machine-id")):
+        try:
+            machine_id = path.read_text().strip()
+            if machine_id:
+                return machine_id
+        except OSError:
+            continue
+    return "unknown"
+
+
 cur_dir = Path(__file__).parent.resolve()
 
 
@@ -139,13 +156,27 @@ class SetupConfig(BaseModelWithFieldAliases):
             "detection/binding and writes each address to the arm's URL/IP field."
         ),
     )
+    use_uuid: bool = Field(
+        False,
+        description=(
+            "Force reading the hardware UUID via `sudo dmidecode` (requires a "
+            "password). By default a non-privileged machine id (/etc/machine-id) "
+            "is used to key the per-station camera name mapping."
+        ),
+    )
 
 
 args = CliApp.run(SetupConfig)
 
 logger.info("Getting system information...")
-hw_uuid = SystemInfo.get_product(True).get("uuid", "unknown")
-logger.info(f"Hardware uuid: {hw_uuid}")
+if args.use_uuid:
+    # Requires sudo (dmidecode); prompts for a password.
+    hw_uuid = SystemInfo.get_product(True).get("uuid", "unknown")
+    logger.info(f"Hardware uuid: {hw_uuid}")
+else:
+    # Non-privileged, stable per-host id; no password prompt.
+    hw_uuid = get_machine_id()
+    logger.info(f"Machine id: {hw_uuid} (use --use-uuid for the sudo dmidecode UUID)")
 
 """Process Configs"""
 ref_cfgs = []
