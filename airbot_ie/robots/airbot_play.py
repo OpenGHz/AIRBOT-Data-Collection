@@ -454,6 +454,8 @@ class AIRBOTPlay(System):
     def _init_args(self):
         self._pose_fields = ("position", "orientation")
         self._post_capture = defaultdict(dict)
+        # _default_limit is the physical travel of each arm/eef type (raw_range
+        # of linear_map). See airbot_ie/docs/post_capture_mapping.md.
         limits: Dict[str, Dict[str, Dict[int, Tuple]]] = {
             "E2B": {"eef/joint_state/position": {0: (0, 0.0471)}},
             "G2": {
@@ -474,11 +476,12 @@ class AIRBOTPlay(System):
             }
         )
         self._default_limit = limits
-        self._default_range = {
-            "G2": {"eef/joint_state/position": {0: [0, 0.072]}},
-            "play": {"arm/joint_state/position": {0: [-3.151, 2.080]}},
-            "play_pro": {"arm/joint_state/position": {0: [-2.74, 2.74]}},
-        }
+        # _default_range is the default for config.range_mapping (target_range of
+        # linear_map). It is a pure OVERRIDE dict: only put entries here whose
+        # target differs from the physical travel (e.g. a soft/normalized range).
+        # When a type is absent, set_post_capture falls back to the follower's
+        # _default_limit, so mapping to full travel needs no entry at all.
+        self._default_range: Dict[str, Dict[str, Dict[int, list]]] = {}
         iden_rela_pose = ((0, 0, 0), (0, 0, 0, 1))
         x_pos = lambda x: (x, 0, 0)  # noqa: E731
         tf_dict = {
@@ -618,8 +621,19 @@ class AIRBOTPlay(System):
         info = info or self.interface.get_product_info()
         arm_type = self._component_types["arm"]
         eef_type = self._component_types["eef"]
+        # raw_range: leader's own physical travel (the value being read).
         default_limits = self._get_default(arm_type, eef_type, self._default_limit)
-        default_range = self._get_default(arm_type, eef_type, self._default_range)
+        # target_range: the captured leader value is sent to the follower verbatim,
+        # so it must be remapped into the FOLLOWER's travel. Default to the
+        # follower's physical limit, then let _default_range override it for any
+        # type that wants a non-physical (soft/normalized) target. Otherwise a
+        # lead E2B fully open (0-0.0471) would only drive a follow G2 to 0.0471 of
+        # its 0.0720 range and never fully open.
+        follower_arm = info["product_type"]
+        follower_eef = info["eef_types"][0]
+        default_range = self._get_default(
+            follower_arm, follower_eef, self._default_limit
+        ) | self._get_default(follower_arm, follower_eef, self._default_range)
         default_transf = {}
         if config is None or config.transform is None or config.transform:
             default_transf["eef/pose"] = self._tf_buffer.lookup_transform(
