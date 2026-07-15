@@ -47,14 +47,30 @@ pip install -e .
 
 ## Offline smoke test (no hardware)
 
+Both the arm and the camera can be fully mocked: `mock=True` swaps the gRPC arm
+backend for `AIRBOTArmMock`, and pointing a camera spec at the airdc `MockCamera`
+gives synthetic frames — so the whole obs/action loop runs without any device.
+
 ```bash
 pixi run -e infer python - <<'PY'
-from lerobot_robot_airbot_play import AIRBOTPlayRobot, AIRBOTPlayRobotConfig
+from lerobot_robot_airbot_play import (
+    AIRBOTPlayRobot, AIRBOTPlayRobotConfig, AirdcCameraSpec,
+)
 
-robot = AIRBOTPlayRobot(AIRBOTPlayRobotConfig(mock=True))
+robot = AIRBOTPlayRobot(AIRBOTPlayRobotConfig(
+    mock=True,
+    cameras={
+        # airdc MockCamera -> synthetic (H, W, 3) uint8 frames
+        "observation.images.rgb": AirdcCameraSpec(
+            target="airdc.common.devices.cameras.mock.MockCamera",
+            width=320, height=240, fps=30, extra={"random": True},
+        ),
+    },
+))
 robot.connect()
-print(robot.observation_features)
-print(robot.get_observation())
+print(robot.observation_features)          # includes observation.images.rgb: (240, 320, 3)
+obs = robot.get_observation()
+print({k: getattr(v, "shape", v) for k, v in obs.items()})
 robot.send_action({f"joint_{i}.pos": 0.0 for i in range(1, 7)} | {"gripper.pos": 0.0})
 robot.disconnect()
 PY
@@ -62,7 +78,12 @@ PY
 
 ## Cameras (reused airdc devices)
 
-Cameras are `airdc` sensor devices, referenced by import path:
+Cameras are `airdc` sensor devices, referenced by import path. Any airdc camera
+works — swap `target` (and `extra`) for the device you have:
+
+- `airdc.common.devices.cameras.mock.MockCamera` — synthetic frames (testing)
+- `airdc.common.devices.cameras.v4l2.V4L2Camera` — USB / V4L2, `extra={"camera_index": 0}`
+- `airdc.common.devices.cameras.intelrealsense.*` — RealSense
 
 ```python
 from lerobot_robot_airbot_play import AIRBOTPlayRobotConfig, AirdcCameraSpec
@@ -77,6 +98,10 @@ cfg = AIRBOTPlayRobotConfig(
     },
 )
 ```
+
+The image observation key is exactly the dict key you choose (here
+`observation.images.rgb`), and its `observation_features` shape is
+`(height, width, 3)`.
 
 ## Policy inference
 
