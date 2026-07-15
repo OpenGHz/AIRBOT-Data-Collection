@@ -59,43 +59,120 @@ ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 mcap-ros2idl-support = "*"
 
 # ---------------------------------------------------------------------------
-# Infer feature: LeRobot policy inference on the AIRBOT Play arm.
+# mlbase feature: the shared LeRobot + PyTorch base that infer / pi05 / pi05-infer
+# all build on (extracted to avoid repeating torch/lerobot/pins in each).
 #   - lerobot requires python >=3.12 (matches the pixi env), which is why the
 #     py3.10 conda env cannot run it.
+#   - lerobot 0.6.1 pins setuptools <81 and packaging <26; conda-forge would
+#     otherwise pin newer ones and the pypi solve would fail against those.
 #   - torch/torchvision are pinned to the PyTorch CUDA 12.8 index (pixi does not
 #     read a path-dependency's own `[tool.uv.sources]`, so we pin here to mirror
-#     lerobot's pyproject).
+#     lerobot's pyproject). cu128 is verified working on this 12.4 driver via
+#     CUDA minor-version compatibility.
+#   - lerobot is the vendored third_party/lerobot, installed editable with no
+#     extras here; downstream features add extras (e.g. [pi,peft]) as needed and
+#     pixi unions them per environment.
+# ---------------------------------------------------------------------------
+[feature.mlbase]
+platforms = ["linux-64"]
+
+[feature.mlbase.dependencies]
+python = ">=3.12,<3.13"
+setuptools = ">=71.0.0,<81"
+packaging = ">=24.2,<26"
+
+[feature.mlbase.pypi-dependencies]
+torch = { version = ">=2.7,<2.12", index = "https://download.pytorch.org/whl/cu128" }
+torchvision = { version = ">=0.22,<0.27", index = "https://download.pytorch.org/whl/cu128" }
+lerobot = { path = "third_party/lerobot", editable = true }
+
+# ---------------------------------------------------------------------------
+# Infer feature (delta over mlbase): the AIRBOT Play robot stack for running a
+# LeRobot policy on the arm.
 #   - airbot_py is a pure-python (py3-none-any) wheel vendored under
 #     airbot_ie/deps/ (shared across airbot_ie, not plugin-specific).
 #   - the plugin package (lerobot_robot_airbot_play) is installed editable so
 #     `--robot.type=airbot_play` is discoverable.
 # ---------------------------------------------------------------------------
-[feature.infer]
-platforms = ["linux-64"]
-
-[feature.infer.dependencies]
-python = ">=3.12,<3.13"
-# lerobot pins setuptools <81 and packaging <26; conda-forge would otherwise
-# pin newer ones and the pypi solve would fail against those.
-setuptools = ">=71.0.0,<81"
-packaging = ">=24.2,<26"
-
 [feature.infer.pypi-dependencies]
-torch = { version = ">=2.7,<2.12", index = "https://download.pytorch.org/whl/cu128" }
-torchvision = { version = ">=0.22,<0.27", index = "https://download.pytorch.org/whl/cu128" }
-lerobot = { path = "third_party/lerobot", editable = true }
 airbot_py = { path = "airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl" }
 lerobot_robot_airbot_play = { path = "airbot_ie/lerobot_plugin/lerobot_robot_airbot_play", editable = true }
 airdc = { path = ".", extras = ["v4l2"], editable = true }
 # pyrealsense2 = "*"
 
 # ---------------------------------------------------------------------------
-# Environments
-#   - default: implicit; base (non-ROS) deps only.
-#   - ros:     base + ROS stack (for ROS samplers / ROS-dependent workflows).
-#   - infer:   base + LeRobot inference stack (torch/cu128 + airbot_py + plugin).
-# The `default` feature is implicitly included in every environment.
+# pi05 feature (delta over mlbase): pi0.5 (LoRA) training from an MCAP dataset via
+# lerobot + mcap-data-loader. Migrated from
+# third_party/MCAP-DataLoader/setup_pi05_server.sh (the server-only hacks there —
+# pip mirror config, hf_xet/flash_attn/torchcodec uninstalls, numpy==1.26.4 pin —
+# are dropped; they worked around a blocked mirror + numpy-1 opencv wheels, and
+# numpy 1.26 is anyway incompatible with lerobot 0.6.1's numpy>=2 pin here).
+#   - lerobot[pi,peft] adds transformers + peft on top of mlbase's base lerobot.
+#   - the non-torchcodec parts of [dataset] (datasets/pandas/pyarrow/av/jsonlines)
+#     are added explicitly. torchcodec is intentionally omitted — its prebuilt
+#     .so needs a specific FFmpeg and raises an OSError lerobot's guard can't
+#     catch; PyAV decodes video instead (matches the script's working fallback).
+#   - mcap-data-loader (provides `mcap_lerobot_train` + McapLeRobotDataset) comes
+#     transitively via airdc, so no editable install is needed.
+#   - model weights (pi05_base ~14.5G, PaliGemma tokenizer) are runtime HF
+#     downloads, not python packages, so they are out of scope here.
+# ---------------------------------------------------------------------------
+[feature.pi05.dependencies]
+hydra-core = "*"
+# datasets (<5) caps fsspec<=2026.2.0; conda-forge would otherwise pin a newer
+# one (pulled via huggingface_hub) and the pypi solve would fail against it.
+fsspec = ">=2023.1.0,<=2026.2.0"
+
+[feature.pi05.pypi-dependencies]
+lerobot = { path = "third_party/lerobot", editable = true, extras = ["pi", "peft"] }
+datasets = ">=4.7.0,<5.0.0"
+pandas = ">=2.0.0,<3.0.0"
+pyarrow = ">=21.0.0,<30.0.0"
+av = ">=15.0.0,<16.0.0"
+jsonlines = ">=4.0.0,<5.0.0"
+
+# pi0.5 tasks (run in the pi05 env). The two model artifacts below are the only
+# non-package installs from setup_pi05_server.sh; the rest of that script was
+# server-specific pip/mirror/uninstall hacks, already dropped.
+#   HF downloads default to the hf-mirror.com endpoint with Xet disabled (the
+#   mirror doesn't proxy Xet CAS) — override HF_ENDPOINT to use hf.co directly.
+#   Weights land in the standard HF cache (~/.cache/huggingface), or set HF_HOME.
+[feature.pi05.tasks.pi05-download-base]
+description = "Download pi05_base weights (~14.5G) from HuggingFace"
+cmd = "python -c \"from huggingface_hub import snapshot_download; print('pi05_base at', snapshot_download('lerobot/pi05_base'))\""
+env = { HF_ENDPOINT = "https://hf-mirror.com", HF_HUB_DISABLE_XET = "1" }
+
+[feature.pi05.tasks.pi05-download-tokenizer]
+description = "Download the gated PaliGemma tokenizer (needs HF_TOKEN with license accepted, or provide it out-of-band)"
+cmd = "python -c \"from huggingface_hub import snapshot_download; print('tokenizer at', snapshot_download('google/paligemma-3b-pt-224', allow_patterns=['tokenizer*','special_tokens_map.json','added_tokens.json','config.json']))\""
+env = { HF_ENDPOINT = "https://hf-mirror.com", HF_HUB_DISABLE_XET = "1" }
+
+[feature.pi05.tasks.pi05-setup]
+description = "Fetch all pi0.5 model artifacts (base weights + tokenizer)"
+depends-on = ["pi05-download-base", "pi05-download-tokenizer"]
+
+[feature.pi05.tasks.pi05-check]
+description = "Offline self-check: import the full pi0.5 training stack and report versions"
+env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
+cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, peft; from lerobot.policies import PreTrainedPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| transformers', transformers.__version__, '| datasets', datasets.__version__)" """
+
+[feature.pi05.tasks.pi05-train]
+description = "Run pi0.5 LoRA training (offline; append -c <config.yaml>, e.g. -c configs/pi05.yaml)"
+env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1", WANDB_MODE = "disabled" }
+cmd = "mcap_lerobot_train"
+
+# ---------------------------------------------------------------------------
+# Environments (mlbase = shared torch + lerobot base; default is implicit in all)
+#   - default:    base (non-ROS) deps only.
+#   - ros:        base + ROS stack (for ROS samplers / ROS-dependent workflows).
+#   - infer:      mlbase + AIRBOT Play robot stack (run a LeRobot policy on the arm).
+#   - pi05:       mlbase + pi0.5 LoRA training stack (lerobot[pi,peft] + datasets/av).
+#   - pi05-infer: mlbase + robot + pi0.5 policy stack, i.e. run a trained pi0.5
+#     policy on the arm via `lerobot-rollout` / `mcap_lerobot_infer`. lerobot's
+#     extras are unioned to [pi,peft] here.
 # ---------------------------------------------------------------------------
 [environments]
 ros = ["ros"]
-infer = ["infer"]
+infer = ["mlbase", "infer"]
+pi05 = ["mlbase", "pi05"]
+pi05-infer = ["mlbase", "infer", "pi05"]
