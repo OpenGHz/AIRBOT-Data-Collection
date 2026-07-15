@@ -1,6 +1,6 @@
 [workspace]
 authors = ["Haizhou Ge <1352674740@qq.com>"]
-channels = ["robostack-jazzy", "conda-forge"]
+channels = ["conda-forge"]
 name = "airdc"
 platforms = ["linux-64"]
 version = "0.1.0"
@@ -14,16 +14,19 @@ test-hardware = "pytest -m hardware --run-hardware"
 # Everything collectable (hardware cases still auto-skip when absent).
 test-all = "pytest"
 
+# ---------------------------------------------------------------------------
+# Default feature: non-ROS dependencies (kept lean; usable without robostack).
+# ---------------------------------------------------------------------------
 [dependencies]
-ros-jazzy-ros-core = ">=0.11.0,<0.12"
-genpy = ">=2022.1,<2023"
-ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 huggingface_hub = "*"
 hydra-joblib-launcher = "*"
 socksio = "*"
+# Test tooling (lightweight; kept in the default feature so `pixi run test`
+# uses the in-env python across all environments instead of a stray system one).
+pytest = "*"
+natsort = "*"
 
 # opencv = ">=4.5.0,<5"
-# ros-jazzy-cv-bridge = ">=4.1.0,<5"
 # matplotlib = ">=3.10.8,<4"
 
 [pypi-dependencies]
@@ -35,5 +38,64 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
 ], editable = true }
 # mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
 redis = "*"
-mcap-ros2idl-support = "*"
 PyNvVideoCodec = "*"
+
+# ---------------------------------------------------------------------------
+# ROS feature: robostack-jazzy stack. Isolated from the default environment so
+# non-ROS workflows (e.g. LeRobot inference) don't pull the ROS toolchain.
+# The robostack channel is scoped here and given higher priority than
+# conda-forge so ROS packages resolve from robostack (original behavior).
+# ---------------------------------------------------------------------------
+[feature.ros]
+channels = [{ channel = "robostack-jazzy", priority = 1 }]
+
+[feature.ros.dependencies]
+ros-jazzy-ros-core = ">=0.11.0,<0.12"
+genpy = ">=2022.1,<2023"
+ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
+# ros-jazzy-cv-bridge = ">=4.1.0,<5"
+
+[feature.ros.pypi-dependencies]
+mcap-ros2idl-support = "*"
+
+# ---------------------------------------------------------------------------
+# Infer feature: LeRobot policy inference on the AIRBOT Play arm.
+#   - lerobot requires python >=3.12 (matches the pixi env), which is why the
+#     py3.10 conda env cannot run it.
+#   - torch/torchvision are pinned to the PyTorch CUDA 12.8 index (pixi does not
+#     read a path-dependency's own `[tool.uv.sources]`, so we pin here to mirror
+#     lerobot's pyproject).
+#   - airbot_py is a pure-python (py3-none-any) wheel vendored under
+#     airbot_ie/deps/ (shared across airbot_ie, not plugin-specific).
+#   - the plugin package (lerobot_robot_airbot_play) is installed editable so
+#     `--robot.type=airbot_play` is discoverable.
+# ---------------------------------------------------------------------------
+[feature.infer]
+platforms = ["linux-64"]
+
+[feature.infer.dependencies]
+python = ">=3.12,<3.13"
+# lerobot pins setuptools <81 and packaging <26; conda-forge would otherwise
+# pin newer ones and the pypi solve would fail against those.
+setuptools = ">=71.0.0,<81"
+packaging = ">=24.2,<26"
+
+[feature.infer.pypi-dependencies]
+torch = { version = ">=2.7,<2.12", index = "https://download.pytorch.org/whl/cu128" }
+torchvision = { version = ">=0.22,<0.27", index = "https://download.pytorch.org/whl/cu128" }
+lerobot = { path = "third_party/lerobot", editable = true }
+airbot_py = { path = "airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl" }
+lerobot_robot_airbot_play = { path = "airbot_ie/lerobot_plugin/lerobot_robot_airbot_play", editable = true }
+airdc = { path = ".", extras = ["v4l2"], editable = true }
+# pyrealsense2 = "*"
+
+# ---------------------------------------------------------------------------
+# Environments
+#   - default: implicit; base (non-ROS) deps only.
+#   - ros:     base + ROS stack (for ROS samplers / ROS-dependent workflows).
+#   - infer:   base + LeRobot inference stack (torch/cu128 + airbot_py + plugin).
+# The `default` feature is implicitly included in every environment.
+# ---------------------------------------------------------------------------
+[environments]
+ros = ["ros"]
+infer = ["infer"]
