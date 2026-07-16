@@ -1,7 +1,7 @@
 # Training config for LeRobot SmolVLA (~450M VLA) on an MCAP dataset backend.
 # Run with the pixi `smolvla` env:
 #
-#   pixi run -e smolvla mcap_lerobot_train -c airbot_ie/lerobot_plugin/examples/smolvla_train.yaml
+#   pixi run -e smolvla mcap-lerobot-train -c airbot_ie/lerobot_plugin/configs/smolvla_train.yaml
 #
 # SmolVLA is the lightweight alternative to pi0.5: it fits an 8 GiB GPU
 # (inference peaks ~1.1 GiB; training needs more for gradients/optimizer, so keep
@@ -27,7 +27,7 @@
 # with:  pixi run -e smolvla smolvla-download-base
 #
 # Run (same command shape as inference — no wrapper task):
-#   pixi run -e smolvla mcap-lerobot-train -c airbot_ie/lerobot_plugin/examples/smolvla_train.yaml
+#   pixi run -e smolvla mcap-lerobot-train -c airbot_ie/lerobot_plugin/configs/smolvla_train.yaml
 
 # Process environment for this run. Applied via os.environ.setdefault (a shell
 # env var still wins), and NOT passed to lerobot-train. Weights are expected in

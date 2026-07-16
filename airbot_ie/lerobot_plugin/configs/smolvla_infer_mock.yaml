@@ -15,7 +15,7 @@
 #     its own 7-dim contract, at which point you add "eef" back.
 #
 #   pixi run -e smolvla-infer mcap-lerobot-infer \
-#     -c airbot_ie/lerobot_plugin/examples/smolvla_infer_mock.yaml
+#     -c airbot_ie/lerobot_plugin/configs/smolvla_infer_mock.yaml
 #
 # For a *trained* checkpoint, point policy.path at your output dir and match the
 # camera keys / components to whatever it was trained on.

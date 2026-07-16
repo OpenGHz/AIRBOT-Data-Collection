@@ -3,7 +3,7 @@
 # Rollout-schema config (lerobot >=0.6 deploys policies with `lerobot-rollout`,
 # which `mcap_data_loader.datasets.mcap_lerobot.infer()` now routes to).
 #
-#   pixi run -e pi05-infer mcap-lerobot-infer -c airbot_ie/lerobot_plugin/examples/pi05_infer_mock.yaml
+#   pixi run -e pi05-infer mcap-lerobot-infer -c airbot_ie/lerobot_plugin/configs/pi05_infer_mock.yaml
 #
 # `cameras` is preserved as a whole mapping by the yaml->CLI flattener, so the
 # two synthetic MockCamera specs are decoded straight into the airbot_play

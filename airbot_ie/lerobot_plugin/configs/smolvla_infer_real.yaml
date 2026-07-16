@@ -1,0 +1,53 @@
+# SmolVLA inference on the REAL AIRBOT Play arm, via `mcap-lerobot-infer`.
+#
+#   pixi run -e smolvla-infer mcap-lerobot-infer \
+#     -c airbot_ie/lerobot_plugin/configs/smolvla_infer_real.yaml
+#
+# Adapt to your setup before running:
+#   * robot.url / robot.port  -> your arm's gRPC endpoint.
+#   * components              -> must match the state dim the checkpoint was
+#                                trained on ([arm]=6, [arm, eef]=7).
+#   * cameras                 -> real airdc camera devices. The keys (camera1,
+#                                ...) MUST match the image feature keys used in
+#                                training (bare names; lerobot prepends
+#                                `observation.images.`). Set camera_index / size
+#                                to your hardware.
+#   * policy.path             -> your trained checkpoint's pretrained_model dir.
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+robot:
+  type: airbot_play
+  url: localhost            # arm gRPC server host
+  port: 50050
+  components: [arm]         # match training state dim: [arm]=6, [arm, eef]=7
+  cameras:
+    # USB / V4L2 camera. Key must match the training image feature name.
+    camera1:
+      target: airdc.common.devices.cameras.v4l2.V4L2Camera
+      width: 640
+      height: 480
+      fps: 30
+      extra: { camera_index: 0 }
+    # Add more cameras to match your trained feature set, e.g.:
+    # camera2:
+    #   target: airdc.common.devices.cameras.v4l2.V4L2Camera
+    #   width: 640
+    #   height: 480
+    #   fps: 30
+    #   extra: { camera_index: 2 }
+    # RealSense alternative (color stream):
+    # wrist:
+    #   target: airdc.common.devices.cameras.intelrealsense.IntelRealSense
+    #   width: 640
+    #   height: 480
+    #   fps: 30
+    #   extra: { camera_index: "<serial_number>", enable_depth: false }
+
+policy:
+  path: outputs/train/my_smolvla/checkpoints/last/pretrained_model
+
+task: "pick and place the block"   # same instruction used during data recording
+fps: 30
+duration: 0                        # 0 = run until interrupted

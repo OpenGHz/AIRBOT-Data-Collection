@@ -1,0 +1,47 @@
+# pi0.5 inference on the REAL AIRBOT Play arm, via `mcap-lerobot-infer`.
+#
+#   pixi run -e pi05-infer mcap-lerobot-infer \
+#     -c airbot_ie/lerobot_plugin/configs/pi05_infer_real.yaml
+#
+# NOTE: pi0.5 is ~3.6B params (~7.8 GiB bf16) and does NOT fit an 8 GiB GPU —
+# run this on a larger card. Use SmolVLA for small GPUs.
+#
+# Adapt to your setup before running:
+#   * robot.url / robot.port  -> your arm's gRPC endpoint.
+#   * components              -> must match the checkpoint's trained state dim
+#                                ([arm]=6, [arm, eef]=7).
+#   * cameras                 -> real airdc camera devices whose keys match the
+#                                image feature keys used in training. Here they
+#                                use the full `observation.images.<name>` form to
+#                                mirror pi0.5 checkpoints trained from MCAP topics.
+#   * policy.path             -> your trained checkpoint's pretrained_model dir.
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+robot:
+  type: airbot_play
+  url: localhost            # arm gRPC server host
+  port: 50050
+  components: [arm]         # match training state dim: [arm]=6, [arm, eef]=7
+  cameras:
+    observation.images.env_camera:
+      target: airdc.common.devices.cameras.v4l2.V4L2Camera
+      width: 640
+      height: 480
+      fps: 30
+      extra: { camera_index: 0 }
+    # Add the other camera(s) your checkpoint expects, e.g.:
+    # observation.images.follow_camera:
+    #   target: airdc.common.devices.cameras.v4l2.V4L2Camera
+    #   width: 640
+    #   height: 480
+    #   fps: 30
+    #   extra: { camera_index: 2 }
+
+policy:
+  path: outputs/train/my_pi05/checkpoints/last/pretrained_model
+
+task: "pick and place the block"   # same instruction used during data recording
+fps: 30
+duration: 0                        # 0 = run until interrupted
