@@ -1,0 +1,64 @@
+# Training config for LeRobot SmolVLA (~450M VLA) on an MCAP dataset backend.
+# Run with the pixi `smolvla` env:
+#
+#   pixi run -e smolvla mcap_lerobot_train -c airbot_ie/lerobot_plugin/examples/smolvla_train.yaml
+#
+# SmolVLA is the lightweight alternative to pi0.5: it fits an 8 GiB GPU
+# (inference peaks ~1.1 GiB; training needs more for gradients/optimizer, so keep
+# the batch size modest and raise it only if VRAM allows).
+#
+# How this differs from configs/pi05.yaml:
+#   * policy.type is `smolvla`.
+#   * SmolVLA normalizes STATE/ACTION with MEAN_STD (pi0.5 uses QUANTILES), so
+#     `compute_quantiles` is NOT needed here — mean/std stats are computed by
+#     default.
+#   * `load_vlm_weights: true` initializes the SmolVLM2 vision-language backbone
+#     from pretrained weights (HuggingFaceTB/SmolVLM2-500M-Video-Instruct), while
+#     the action expert is trained on your data. This is the recommended
+#     fine-tune setup and needs far less data than training the VLM from scratch.
+#   * Using `type: smolvla` (rather than `policy.path: lerobot/smolvla_base`) lets
+#     make_policy derive input/output features from THIS dataset's states/actions/
+#     images, so your own MCAP topics/dims are used as-is. To instead fine-tune
+#     the full pretrained SmolVLA weights (backbone + action expert), set
+#     `policy.path: lerobot/smolvla_base` — but then the dataset's cameras/state
+#     must match the base's contract (camera1/2/3 + 6-dim state).
+#
+# First run loads the SmolVLM2 backbone from the HF cache; fetch it beforehand
+# with:  pixi run -e smolvla smolvla-download-base
+
+batch_size: 4              # 8 GiB-friendly starting point; raise if VRAM allows
+num_workers: 1
+
+policy:
+  type: smolvla
+  push_to_hub: false
+  chunk_size: 50           # SmolVLA action horizon
+  n_action_steps: 50       # steps to execute; must be <= chunk_size
+  load_vlm_weights: true   # init the SmolVLM2 backbone from pretrained weights
+  # train_expert_only: true      # freeze the VLM, train only the action expert (cheaper)
+  # freeze_vision_encoder: true
+
+dataset:
+  root: data
+  repo_id: example
+  streaming: true
+
+mcap:
+  rela_pose: true
+  rot6d: false
+  # SmolVLA is a VLA and uses the proprioceptive state; keep it non-empty.
+  states:
+    - /follow/arm/pose/position
+    - /follow/arm/pose/orientation
+  images:
+    - /env_camera/color/image_raw
+  actions:
+    - /lead/arm/pose/position
+    - /lead/arm/pose/orientation
+  # Language task handling (VLA requirement), same as pi0.5:
+  # "metadata" reads the instruction from an MCAP metadata record; "config" uses
+  # the static `task` below; "none" disables it.
+  task_source: metadata
+  task_metadata_name: task_info
+  task_field: task_description       # use "task_description_zh" for Chinese prompts
+  task: "do the task"                # fallback when metadata is missing

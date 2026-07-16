@@ -1,0 +1,33 @@
+# pi0.5 inference on the MOCK AIRBOT Play arm, via `mcap-lerobot-infer`.
+#
+# Rollout-schema config (lerobot >=0.6 deploys policies with `lerobot-rollout`,
+# which `mcap_data_loader.datasets.mcap_lerobot.infer()` now routes to).
+#
+#   pixi run -e pi05-infer mcap-lerobot-infer -c airbot_ie/lerobot_plugin/examples/pi05_infer_mock.yaml
+#
+# `cameras` is preserved as a whole mapping by the yaml->CLI flattener, so the
+# two synthetic MockCamera specs are decoded straight into the airbot_play
+# robot config. Their keys are exactly the policy's image features.
+robot:
+  type: airbot_play
+  mock: true
+  cameras:
+    observation.images.env_camera:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 640
+      height: 480
+      fps: 30
+      extra: { random: true }
+    observation.images.follow_camera:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 640
+      height: 480
+      fps: 30
+      extra: { random: true }
+
+policy:
+  path: outputs/train/pi05_smoke/checkpoints/000010/pretrained_model
+
+task: "pick and place the block"
+fps: 30
+duration: 3

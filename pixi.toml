@@ -101,39 +101,45 @@ airdc = { path = ".", extras = ["v4l2"], editable = true }
 # pyrealsense2 = "*"
 
 # ---------------------------------------------------------------------------
-# pi05 feature (delta over mlbase): pi0.5 (LoRA) training from an MCAP dataset via
-# lerobot + mcap-data-loader. Migrated from
-# third_party/MCAP-DataLoader/setup_pi05_server.sh (the server-only hacks there —
-# pip mirror config, hf_xet/flash_attn/torchcodec uninstalls, numpy==1.26.4 pin —
-# are dropped; they worked around a blocked mirror + numpy-1 opencv wheels, and
-# numpy 1.26 is anyway incompatible with lerobot 0.6.1's numpy>=2 pin here).
-#   - lerobot[pi,peft] adds transformers + peft on top of mlbase's base lerobot.
-#   - the non-torchcodec parts of [dataset] (datasets/pandas/pyarrow/av/jsonlines)
-#     are added explicitly. torchcodec is intentionally omitted — its prebuilt
-#     .so needs a specific FFmpeg and raises an OSError lerobot's guard can't
-#     catch; PyAV decodes video instead (matches the script's working fallback).
-#   - mcap-data-loader (provides `mcap_lerobot_train` + McapLeRobotDataset) comes
-#     transitively via airdc, so no editable install is needed.
-#   - model weights (pi05_base ~14.5G, PaliGemma tokenizer) are runtime HF
-#     downloads, not python packages, so they are out of scope here.
+# letrain feature (delta over mlbase): the shared "train a lerobot policy from an
+# MCAP dataset" data stack, common to pi0.5 and SmolVLA (and any future VLA).
+# Extracted so the two policy features don't each repeat datasets/av/etc.
+#   - the non-torchcodec parts of lerobot's [dataset] extra
+#     (datasets/pandas/pyarrow/av/jsonlines) are added explicitly. torchcodec is
+#     intentionally omitted — its prebuilt .so needs a specific FFmpeg and raises
+#     an OSError lerobot's guard can't catch; PyAV decodes video instead.
+#   - mcap-data-loader (provides `mcap_lerobot_train`/`infer` + McapLeRobotDataset)
+#     comes transitively via airdc (editable), so no extra install is needed.
 # ---------------------------------------------------------------------------
-[feature.pi05.dependencies]
+[feature.letrain.dependencies]
 hydra-core = "*"
 # datasets (<5) caps fsspec<=2026.2.0; conda-forge would otherwise pin a newer
 # one (pulled via huggingface_hub) and the pypi solve would fail against it.
 fsspec = ">=2023.1.0,<=2026.2.0"
 
-[feature.pi05.pypi-dependencies]
-lerobot = { path = "third_party/lerobot", editable = true, extras = ["pi", "peft"] }
+[feature.letrain.pypi-dependencies]
 datasets = ">=4.7.0,<5.0.0"
 pandas = ">=2.0.0,<3.0.0"
 pyarrow = ">=21.0.0,<30.0.0"
 av = ">=15.0.0,<16.0.0"
 jsonlines = ">=4.0.0,<5.0.0"
 
-# pi0.5 tasks (run in the pi05 env). The two model artifacts below are the only
-# non-package installs from setup_pi05_server.sh; the rest of that script was
-# server-specific pip/mirror/uninstall hacks, already dropped.
+# ---------------------------------------------------------------------------
+# pi05 feature (delta over mlbase+letrain): pi0.5 (LoRA) policy. Migrated from
+# third_party/MCAP-DataLoader/setup_pi05_server.sh (the server-only hacks there —
+# pip mirror config, hf_xet/flash_attn/torchcodec uninstalls, numpy==1.26.4 pin —
+# are dropped; they worked around a blocked mirror + numpy-1 opencv wheels, and
+# numpy 1.26 is anyway incompatible with lerobot 0.6.1's numpy>=2 pin here).
+# NOTE: pi0.5 is ~3.6B params (~7.8 GiB bf16 on GPU) and does NOT fit an 8 GiB
+# card — use SmolVLA below for a lightweight (~450M) option on small GPUs.
+#   - lerobot[pi,peft] adds transformers + peft on top of mlbase's base lerobot.
+# ---------------------------------------------------------------------------
+[feature.pi05.pypi-dependencies]
+lerobot = { path = "third_party/lerobot", editable = true, extras = ["pi", "peft"] }
+
+# pi0.5 tasks. The model artifacts below are the only non-package installs from
+# setup_pi05_server.sh; the rest of that script was server-specific pip/mirror/
+# uninstall hacks, already dropped.
 #   HF downloads default to the hf-mirror.com endpoint with Xet disabled (the
 #   mirror doesn't proxy Xet CAS) — override HF_ENDPOINT to use hf.co directly.
 #   Weights land in the standard HF cache (~/.cache/huggingface), or set HF_HOME.
@@ -162,17 +168,53 @@ env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1", WANDB_MODE = "disabled
 cmd = "mcap_lerobot_train"
 
 # ---------------------------------------------------------------------------
-# Environments (mlbase = shared torch + lerobot base; default is implicit in all)
-#   - default:    base (non-ROS) deps only.
-#   - ros:        base + ROS stack (for ROS samplers / ROS-dependent workflows).
-#   - infer:      mlbase + AIRBOT Play robot stack (run a LeRobot policy on the arm).
-#   - pi05:       mlbase + pi0.5 LoRA training stack (lerobot[pi,peft] + datasets/av).
-#   - pi05-infer: mlbase + robot + pi0.5 policy stack, i.e. run a trained pi0.5
-#     policy on the arm via `lerobot-rollout` / `mcap_lerobot_infer`. lerobot's
-#     extras are unioned to [pi,peft] here.
+# smolvla feature (delta over mlbase+letrain): SmolVLA, HF's lightweight (~450M)
+# VLA — the small-GPU-friendly alternative to pi0.5. smolvla_base is ~907 MB on
+# disk (~0.45 GiB bf16 on GPU), so it fits an 8 GiB card with room to spare.
+#   - lerobot[smolvla] adds transformers + accelerate + num2words on top of
+#     mlbase's base lerobot (transformers/accelerate overlap pi05's, unioned by
+#     pixi). SmolVLA's SmolLM2 tokenizer is public (not gated like PaliGemma).
+#   - train/infer use the same entrypoints as pi0.5 (mcap_lerobot_train /
+#     mcap-lerobot-infer -> lerobot-train / lerobot-rollout); only the config's
+#     `policy.type`/`policy.path` differ, so no code changes are needed.
+# ---------------------------------------------------------------------------
+[feature.smolvla.pypi-dependencies]
+lerobot = { path = "third_party/lerobot", editable = true, extras = ["smolvla"] }
+
+[feature.smolvla.tasks.smolvla-download-base]
+description = "Download smolvla_base (~907MB) + its SmolVLM2 backbone (~500M) from HuggingFace"
+# SmolVLA loads two public repos: the policy weights (lerobot/smolvla_base) and
+# its VLM backbone (HuggingFaceTB/SmolVLM2-500M-Video-Instruct, pulled by
+# transformers at model-build time). Both must be cached for offline inference.
+cmd = "python -c \"from huggingface_hub import snapshot_download; print('smolvla_base at', snapshot_download('lerobot/smolvla_base')); print('vlm backbone at', snapshot_download('HuggingFaceTB/SmolVLM2-500M-Video-Instruct'))\""
+env = { HF_ENDPOINT = "https://hf-mirror.com", HF_HUB_DISABLE_XET = "1" }
+
+[feature.smolvla.tasks.smolvla-check]
+description = "Offline self-check: import the SmolVLA training stack and report versions"
+env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
+cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2words; from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('SMOLVLA SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| transformers', transformers.__version__)" """
+
+[feature.smolvla.tasks.smolvla-train]
+description = "Run SmolVLA training (offline; append -c <config.yaml>, e.g. -c configs/smolvla.yaml)"
+env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1", WANDB_MODE = "disabled" }
+cmd = "mcap_lerobot_train"
+
+# ---------------------------------------------------------------------------
+# Environments (mlbase = shared torch + lerobot base; letrain = shared dataset
+# stack; default is implicit in all)
+#   - default:       base (non-ROS) deps only.
+#   - ros:           base + ROS stack (for ROS samplers / ROS-dependent workflows).
+#   - infer:         mlbase + AIRBOT Play robot stack (run a LeRobot policy on the arm).
+#   - pi05:          mlbase + letrain + pi0.5 policy (train). ~3.6B, needs a big GPU.
+#   - pi05-infer:    pi05 + robot, i.e. run a trained pi0.5 policy on the arm.
+#   - smolvla:       mlbase + letrain + SmolVLA policy (train). ~450M, fits 8 GiB.
+#   - smolvla-infer: smolvla + robot, i.e. run a trained SmolVLA policy on the arm.
+# lerobot extras are unioned per environment by pixi.
 # ---------------------------------------------------------------------------
 [environments]
 ros = ["ros"]
 infer = ["mlbase", "infer"]
-pi05 = ["mlbase", "pi05"]
-pi05-infer = ["mlbase", "infer", "pi05"]
+pi05 = ["mlbase", "letrain", "pi05"]
+pi05-infer = ["mlbase", "letrain", "infer", "pi05"]
+smolvla = ["mlbase", "letrain", "smolvla"]
+smolvla-infer = ["mlbase", "letrain", "infer", "smolvla"]

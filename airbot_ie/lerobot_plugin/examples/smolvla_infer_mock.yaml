@@ -1,0 +1,51 @@
+# SmolVLA inference on the MOCK AIRBOT Play arm, via `mcap-lerobot-infer`.
+#
+# SmolVLA (~450M) fits an 8 GiB GPU, unlike pi0.5 (~3.6B). This runs the base
+# model straight from `lerobot/smolvla_base`, whose baked feature contract is:
+#   observation.state              -> (6,)
+#   observation.images.camera1/2/3 -> (3, 256, 256)   (3 cameras)
+#   action                         -> (6,)
+#
+# To match that contract from a from-base smoke test (no training):
+#   * camera keys are the BARE names camera1/2/3 — lerobot's hw_to_dataset_features
+#     prepends `observation.images.`, so the robot key must NOT already contain it.
+#   * components: [arm] only (6 joints) so the aggregated observation.state is
+#     (6,), matching the base model. Include "eef" and it becomes (7,), which the
+#     base normalizer (built for 6) rejects — a real trained checkpoint would bake
+#     its own 7-dim contract, at which point you add "eef" back.
+#
+#   pixi run -e smolvla-infer mcap-lerobot-infer \
+#     -c airbot_ie/lerobot_plugin/examples/smolvla_infer_mock.yaml
+#
+# For a *trained* checkpoint, point policy.path at your output dir and match the
+# camera keys / components to whatever it was trained on.
+robot:
+  type: airbot_play
+  mock: true
+  components: [arm]          # 6-DoF -> observation.state (6,), matches smolvla_base
+  cameras:
+    camera1:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 256
+      height: 256
+      fps: 30
+      extra: { random: true }
+    camera2:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 256
+      height: 256
+      fps: 30
+      extra: { random: true }
+    camera3:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 256
+      height: 256
+      fps: 30
+      extra: { random: true }
+
+policy:
+  path: lerobot/smolvla_base
+
+task: "pick and place the block"
+fps: 30
+duration: 3
