@@ -2,6 +2,8 @@
 
 在本仓库用 [LeRobot](https://github.com/huggingface/lerobot) 训练策略、并在 AIRBOT Play 机械臂（真机或 mock）上推理的统一流程。
 
+> 前置：安装 pixi（一次性）。若尚未安装，运行 `bash install/install_pixi.sh` 完成 pixi 的安装。
+
 流程对所有策略一致，**唯一的差异是策略名**。用一个环境变量 `POLICY` 指定策略，其余命令原样复用：
 
 ```bash
