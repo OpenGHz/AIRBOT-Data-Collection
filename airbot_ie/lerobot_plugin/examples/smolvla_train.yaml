@@ -25,6 +25,17 @@
 #
 # First run loads the SmolVLM2 backbone from the HF cache; fetch it beforehand
 # with:  pixi run -e smolvla smolvla-download-base
+#
+# Run (same command shape as inference — no wrapper task):
+#   pixi run -e smolvla mcap-lerobot-train -c airbot_ie/lerobot_plugin/examples/smolvla_train.yaml
+
+# Process environment for this run. Applied via os.environ.setdefault (a shell
+# env var still wins), and NOT passed to lerobot-train. Weights are expected in
+# the HF cache, so offline mode is safe; drop HF_HUB_OFFLINE for first-run fetch.
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+  WANDB_MODE: disabled
 
 batch_size: 4              # 8 GiB-friendly starting point; raise if VRAM allows
 num_workers: 1

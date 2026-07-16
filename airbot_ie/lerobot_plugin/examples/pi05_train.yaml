@@ -14,6 +14,17 @@
 #
 # First run will download the PaliGemma tokenizer / weights
 # (google/paligemma-3b-pt-224) from the Hugging Face hub.
+#
+# Run (same command shape as inference — no wrapper task):
+#   pixi run -e pi05 mcap-lerobot-train -c airbot_ie/lerobot_plugin/examples/pi05_train.yaml
+
+# Process environment for this run. Applied via os.environ.setdefault (a shell
+# env var still wins), and NOT passed to lerobot-train. Weights are expected in
+# the HF cache, so offline mode is safe; drop HF_HUB_OFFLINE for first-run fetch.
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+  WANDB_MODE: disabled
 
 batch_size: 4
 num_workers: 1
