@@ -162,10 +162,10 @@ description = "Offline self-check: import the full pi0.5 training stack and repo
 env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
 cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, peft; from lerobot.policies import PreTrainedPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| transformers', transformers.__version__, '| datasets', datasets.__version__)" """
 
-[feature.pi05.tasks.pi05-train]
-description = "Run pi0.5 LoRA training (offline; append -c <config.yaml>, e.g. -c configs/pi05.yaml)"
-env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1", WANDB_MODE = "disabled" }
-cmd = "mcap_lerobot_train"
+# NOTE: no `pi05-train` task — training is driven the same way as inference, with
+# a plain command + config: `pixi run -e pi05 mcap-lerobot-train -c <config>.yaml`.
+# Run-time env vars (WANDB_MODE, HF_HUB_OFFLINE, ...) live in the config's `env:`
+# block, so no wrapper task is needed.
 
 # ---------------------------------------------------------------------------
 # smolvla feature (delta over mlbase+letrain): SmolVLA, HF's lightweight (~450M)
@@ -189,15 +189,16 @@ description = "Download smolvla_base (~907MB) + its SmolVLM2 backbone (~500M) fr
 cmd = "python -c \"from huggingface_hub import snapshot_download; print('smolvla_base at', snapshot_download('lerobot/smolvla_base')); print('vlm backbone at', snapshot_download('HuggingFaceTB/SmolVLM2-500M-Video-Instruct'))\""
 env = { HF_ENDPOINT = "https://hf-mirror.com", HF_HUB_DISABLE_XET = "1" }
 
+[feature.smolvla.tasks.smolvla-setup]
+description = "Fetch all SmolVLA model artifacts (base weights + SmolVLM2 backbone)"
+# Parity with pi05-setup so docs can use a uniform `$POLICY-setup`. SmolVLA has
+# no gated tokenizer step, so this is just the base download.
+depends-on = ["smolvla-download-base"]
+
 [feature.smolvla.tasks.smolvla-check]
 description = "Offline self-check: import the SmolVLA training stack and report versions"
 env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
 cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2words; from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('SMOLVLA SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| transformers', transformers.__version__)" """
-
-[feature.smolvla.tasks.smolvla-train]
-description = "Run SmolVLA training (offline; append -c <config.yaml>, e.g. -c configs/smolvla.yaml)"
-env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1", WANDB_MODE = "disabled" }
-cmd = "mcap_lerobot_train"
 
 # ---------------------------------------------------------------------------
 # Environments (mlbase = shared torch + lerobot base; letrain = shared dataset

@@ -17,7 +17,7 @@ export POLICY=smolvla     # 轻量 ~450M，8G 显卡可训可推
 | pixi 推理环境 | `$POLICY-infer`（如 `smolvla-infer`） |
 | 训练配置 | `airbot_ie/lerobot_plugin/configs/${POLICY}_train.yaml` |
 | 推理配置（mock） | `airbot_ie/lerobot_plugin/configs/${POLICY}_infer_mock.yaml` |
-| 下载任务 | `$POLICY-download-base` |
+| 一次性配置任务 | `$POLICY-setup` |
 
 训练与推理都用同一种方式驱动：**一个命令 + `-c <config>.yaml`**。命令入口 `mcap-lerobot-train` / `mcap-lerobot-infer` 由 `mcap-data-loader` 提供，内部分别调用 `lerobot-train` / `lerobot-rollout`，与策略无关。
 
@@ -37,10 +37,10 @@ env:
 策略基座与其骨干是运行时 HF 权重，不是 python 包，需先下载到本地 HF 缓存：
 
 ```bash
-pixi run -e $POLICY $POLICY-download-base
+pixi run -e $POLICY $POLICY-setup
 ```
 
-> pi0.5 额外需要门控的 PaliGemma tokenizer：`pixi run -e pi05 pi05-setup`（需已接受许可的 `HF_TOKEN`）。SmolVLA 无此步。
+> `$POLICY-setup` 会拉取该策略所需的全部权重。pi0.5 还包含门控的 PaliGemma tokenizer，需要已接受许可的 `HF_TOKEN`；SmolVLA 无此步。
 >
 > 下载默认走 `HF_ENDPOINT=https://hf-mirror.com`；改此环境变量可切官方源。
 
