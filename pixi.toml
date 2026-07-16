@@ -201,9 +201,31 @@ env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
 cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2words; from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('SMOLVLA SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| transformers', transformers.__version__)" """
 
 # ---------------------------------------------------------------------------
+# collect feature: the data-collection environment. This is the pixi equivalent
+# of `bash install/install.sh` (system deps + `pip install -e .[all,airbot]`):
+#   - airdc[all,airbot] editable = the full data-collection stack (basic/cfg/soft/
+#     hard/cv2 + ruamel.yaml), i.e. hardware I/O (pynput/linuxpy/pyudev/
+#     PyTurboJPEG), opencv, config tooling.
+#   - libjpeg-turbo (conda) provides libturbojpeg.so that PyTurboJPEG loads at
+#     runtime — the conda replacement for the apt `libturbojpeg` package, so no
+#     sudo/apt is needed.
+# Kept as a SEPARATE environment (not composed with mlbase) on purpose: airdc[cv2]
+# pulls opencv-python, which collides with lerobot's opencv-python-headless in the
+# ML envs (both provide the cv2 module). Data collection and policy inference
+# therefore live in different environments.
+# ---------------------------------------------------------------------------
+[feature.collect.dependencies]
+libjpeg-turbo = "*"       # libturbojpeg.so for PyTurboJPEG (apt equivalent: libturbojpeg)
+
+[feature.collect.pypi-dependencies]
+airdc = { path = ".", extras = ["all", "airbot"], editable = true }
+
+# ---------------------------------------------------------------------------
 # Environments (mlbase = shared torch + lerobot base; letrain = shared dataset
 # stack; default is implicit in all)
 #   - default:       base (non-ROS) deps only.
+#   - collect:       data-collection stack (airdc[all,airbot] + libturbojpeg);
+#                    the pixi replacement for `bash install/install.sh`.
 #   - ros:           base + ROS stack (for ROS samplers / ROS-dependent workflows).
 #   - infer:         mlbase + AIRBOT Play robot stack (run a LeRobot policy on the arm).
 #   - pi05:          mlbase + letrain + pi0.5 policy (train). ~3.6B, needs a big GPU.
@@ -213,6 +235,7 @@ cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2wo
 # lerobot extras are unioned per environment by pixi.
 # ---------------------------------------------------------------------------
 [environments]
+collect = ["collect"]
 ros = ["ros"]
 infer = ["mlbase", "infer"]
 pi05 = ["mlbase", "letrain", "pi05"]
