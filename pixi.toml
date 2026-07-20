@@ -116,15 +116,29 @@ torch = { version = ">=2.7,<2.12", index = "https://mirrors.nju.edu.cn/pytorch/w
 torchvision = { version = ">=0.22,<0.27", index = "https://mirrors.nju.edu.cn/pytorch/whl/cu128" }
 
 # ---------------------------------------------------------------------------
-# airbot feature (delta over mlbase): the AIRBOT Play robot stack for running a
-# LeRobot policy on the real arm.
-#   - airbot_py is a pure-python (py3-none-any) wheel vendored under
-#     airbot_ie/deps/ (shared across airbot_ie, not plugin-specific).
-#   - the plugin package (lerobot_robot_airbot_play) is installed editable so
-#     `--robot.type=airbot_play` is discoverable.
+# airbotpy feature: JUST the airbot_py arm SDK — a pure-python (py3-none-any)
+# wheel vendored under airbot_ie/deps/. It is light (only grpcio + typeguard at
+# runtime), so it is shared by BOTH the data-collection env (`collect`, which
+# talks to the arm over airbot_py's grpc backend) and the on-arm inference envs,
+# WITHOUT dragging in lerobot. Kept as a pixi feature (native relative path dep)
+# rather than an airdc[airbot] extra: a relative `file:` URL baked into airdc's
+# built wheel metadata can't be resolved by uv during a solve ("relative path
+# without a working directory"), whereas pixi resolves this path from the
+# manifest directory just fine.
+# ---------------------------------------------------------------------------
+[feature.airbotpy.pypi-dependencies]
+airbot_py = { path = "airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl" }
+
+# ---------------------------------------------------------------------------
+# airbot feature (delta over mlbase + airbotpy): the LeRobot plugin that makes
+# `--robot.type=airbot_play` discoverable, for running a policy on the real arm.
+#   - lerobot_robot_airbot_play depends on `lerobot`, so this feature must stay
+#     OUT of the `collect` env: lerobot pulls opencv-python-headless, which
+#     collides with airdc[cv2]'s opencv-python (both provide `cv2`). The airbot_py
+#     SDK it imports comes from the separate `airbotpy` feature above.
+#   - airdc[v4l2] adds camera I/O (linuxpy/PyTurboJPEG) to the inference envs.
 # ---------------------------------------------------------------------------
 [feature.airbot.pypi-dependencies]
-airbot_py = { path = "airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl" }
 lerobot_robot_airbot_play = { path = "airbot_ie/lerobot_plugin/lerobot_robot_airbot_play", editable = true }
 airdc = { path = ".", extras = ["v4l2"], editable = true }
 # pyrealsense2 = "*"
@@ -269,8 +283,9 @@ lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim
 # Environments (mlbase = shared torch + lerobot base; ledata = shared dataset
 # stack; default is implicit in all)
 #   - default:       base (non-ROS) deps only.
-#   - collect:       data-collection stack (airdc[all,airbot] + libturbojpeg);
-#                    the pixi replacement for `bash install/install.sh`.
+#   - collect:       data-collection stack (airdc[all,airbot] + libturbojpeg +
+#                    airbot_py SDK via the `airbotpy` feature); the pixi
+#                    replacement for `bash install/install.sh`.
 #   - ros:           base + ROS stack + aao (for ROS samplers / ROS workflows).
 #   - infer-airbot:  mlbase + AIRBOT Play robot stack (run a LeRobot policy on the
 #                    real arm).
@@ -283,14 +298,17 @@ lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim
 # lerobot extras are unioned per environment by pixi.
 # ---------------------------------------------------------------------------
 [environments]
-collect = ["collect"]
+# `airbotpy` gives the data-collection env the airbot_py arm SDK (grpc backend)
+# without the lerobot plugin (which lives in the `airbot` feature).
+collect = ["collect", "airbotpy"]
 ros = ["ros", "aao"]
 # `ledata` carries the lerobot dataset stack (datasets/pandas/av/...), which
 # `lerobot.rollout` (= what mcap-lerobot-infer runs) requires at import — not
 # just training. So every inference env needs it too.
-infer-airbot = ["mlbase", "ledata", "airbot"]
+# `airbotpy` provides the airbot_py SDK; `airbot` adds the lerobot plugin on top.
+infer-airbot = ["mlbase", "ledata", "airbotpy", "airbot"]
 infer-aao = ["mlbase", "ledata", "aao"]
 pi05 = ["mlbase", "ledata", "pi05"]
-pi05-infer = ["mlbase", "ledata", "airbot", "pi05"]
+pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05"]
 smolvla = ["mlbase", "ledata", "smolvla"]
-smolvla-infer = ["mlbase", "ledata", "airbot", "smolvla"]
+smolvla-infer = ["mlbase", "ledata", "airbotpy", "airbot", "smolvla"]
