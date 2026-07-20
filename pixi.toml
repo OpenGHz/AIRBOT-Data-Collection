@@ -45,10 +45,9 @@ natsort = "*"
 [pypi-dependencies]
 httpx = { extras = ["socks"] }
 airdc = { path = ".", extras = ["assis"], editable = true }
-auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
-    "mujoco",
-    "gs",
-], editable = true }
+# Editable during development so fixes to mcap_lerobot (train/infer) take effect
+# without reinstall. Provides the mcap-data-loader that airdc (>=0.3.1) requires;
+# base deps are light (no torch/lerobot — those are imported lazily).
 # mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
 redis = "*"
 PyNvVideoCodec = "*"
@@ -72,8 +71,8 @@ ros-jazzy-foxglove-msgs = ">=3.2.4,<4"
 mcap-ros2idl-support = "*"
 
 # ---------------------------------------------------------------------------
-# mlbase feature: the shared LeRobot + PyTorch base that infer / pi05 / pi05-infer
-# all build on (extracted to avoid repeating torch/lerobot/pins in each).
+# mlbase feature: the shared LeRobot + PyTorch base that the infer-* / pi05 /
+# smolvla envs all build on (extracted to avoid repeating torch/lerobot/pins).
 #   - lerobot requires python >=3.12 (matches the pixi env), which is why the
 #     py3.10 conda env cannot run it.
 #   - lerobot 0.6.1 pins setuptools <81 and packaging <26; conda-forge would
@@ -114,14 +113,14 @@ torch = { version = ">=2.7,<2.12", index = "https://mirrors.nju.edu.cn/pytorch/w
 torchvision = { version = ">=0.22,<0.27", index = "https://mirrors.nju.edu.cn/pytorch/whl/cu128" }
 
 # ---------------------------------------------------------------------------
-# Infer feature (delta over mlbase): the AIRBOT Play robot stack for running a
-# LeRobot policy on the arm.
+# airbot feature (delta over mlbase): the AIRBOT Play robot stack for running a
+# LeRobot policy on the real arm.
 #   - airbot_py is a pure-python (py3-none-any) wheel vendored under
 #     airbot_ie/deps/ (shared across airbot_ie, not plugin-specific).
 #   - the plugin package (lerobot_robot_airbot_play) is installed editable so
 #     `--robot.type=airbot_play` is discoverable.
 # ---------------------------------------------------------------------------
-[feature.infer.pypi-dependencies]
+[feature.airbot.pypi-dependencies]
 airbot_py = { path = "airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl" }
 lerobot_robot_airbot_play = { path = "airbot_ie/lerobot_plugin/lerobot_robot_airbot_play", editable = true }
 airdc = { path = ".", extras = ["v4l2"], editable = true }
@@ -248,24 +247,40 @@ libjpeg-turbo = "*"       # libturbojpeg.so for PyTurboJPEG (apt equivalent: lib
 airdc = { path = ".", extras = ["all", "airbot"], editable = true }
 
 # ---------------------------------------------------------------------------
+# aao feature: auto-atomic-operation — the MuJoCo (physics) + Gaussian-splatting
+# (gs) simulation stack. Kept OUT of the default environment (it pulls heavy
+# sim/render deps like mujoco + gsplat) and composed only where auto-atom is
+# actually needed: the `ros` env and the `infer-aao` env.
+# ---------------------------------------------------------------------------
+[feature.aao.pypi-dependencies]
+auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
+    "mujoco",
+    "gs",
+], editable = true }
+
+# ---------------------------------------------------------------------------
 # Environments (mlbase = shared torch + lerobot base; letrain = shared dataset
 # stack; default is implicit in all)
 #   - default:       base (non-ROS) deps only.
 #   - collect:       data-collection stack (airdc[all,airbot] + libturbojpeg);
 #                    the pixi replacement for `bash install/install.sh`.
-#   - ros:           base + ROS stack (for ROS samplers / ROS-dependent workflows).
-#   - infer:         mlbase + AIRBOT Play robot stack (run a LeRobot policy on the arm).
+#   - ros:           base + ROS stack + aao (for ROS samplers / ROS workflows).
+#   - infer-airbot:  mlbase + AIRBOT Play robot stack (run a LeRobot policy on the
+#                    real arm).
+#   - infer-aao:     mlbase + aao stack (auto-atom MuJoCo/gs) — run a LeRobot
+#                    policy in simulation, no real hardware.
 #   - pi05:          mlbase + letrain + pi0.5 policy (train). ~3.6B, needs a big GPU.
-#   - pi05-infer:    pi05 + robot, i.e. run a trained pi0.5 policy on the arm.
+#   - pi05-infer:    pi05 + airbot robot, i.e. run a trained pi0.5 policy on the arm.
 #   - smolvla:       mlbase + letrain + SmolVLA policy (train). ~450M, fits 8 GiB.
-#   - smolvla-infer: smolvla + robot, i.e. run a trained SmolVLA policy on the arm.
+#   - smolvla-infer: smolvla + airbot robot, i.e. run a trained SmolVLA policy on the arm.
 # lerobot extras are unioned per environment by pixi.
 # ---------------------------------------------------------------------------
 [environments]
 collect = ["collect"]
-ros = ["ros"]
-infer = ["mlbase", "infer"]
+ros = ["ros", "aao"]
+infer-airbot = ["mlbase", "airbot"]
+infer-aao = ["mlbase", "aao"]
 pi05 = ["mlbase", "letrain", "pi05"]
-pi05-infer = ["mlbase", "letrain", "infer", "pi05"]
+pi05-infer = ["mlbase", "letrain", "airbot", "pi05"]
 smolvla = ["mlbase", "letrain", "smolvla"]
-smolvla-infer = ["mlbase", "letrain", "infer", "smolvla"]
+smolvla-infer = ["mlbase", "letrain", "airbot", "smolvla"]
