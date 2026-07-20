@@ -51,6 +51,14 @@ robot:
 policy:
   path: outputs/train/my_smolvla/checkpoints/last/pretrained_model
 
-task: "pick and place the block"   # same instruction used during data recording
-fps: 30
-duration: 0                        # 0 = run until interrupted
+# ============================================================================
+# Common inference knobs — just edit the value after each key.
+# NOTE: rollout runs for a DURATION (seconds), not a step count. duration: 0
+# means run forever until you press Ctrl-C.
+# ============================================================================
+task: "pick and place the block"   # language instruction; use the same one as in training
+duration: 0                        # how long to run, in seconds (0 = until Ctrl-C)
+fps: 30                            # control loop rate (policy call + robot step per tick)
+device: cuda                       # cuda | cpu (falls back to cpu automatically if no GPU)
+return_to_initial_position: true   # move the arm back to its start pose when the run ends
+display_data: false                # true = live camera/action visualization window (needs a display)

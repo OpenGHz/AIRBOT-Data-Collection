@@ -30,8 +30,21 @@ env:
   HF_HUB_DISABLE_XET: "1"
   WANDB_MODE: disabled
 
-batch_size: 4
-num_workers: 1
+# ============================================================================
+# Common training knobs — just edit the value after each key.
+# ============================================================================
+steps: 20000               # total training steps (larger = longer; use ~100 for a smoke test)
+save_freq: 5000            # save a checkpoint every N steps (and after the last step)
+log_freq: 100              # print a training log line (loss, etc.) every N steps
+batch_size: 4              # samples per step (raise if VRAM allows)
+num_workers: 1             # data-loading worker processes (set 0 first if loading hangs)
+output_dir: outputs/train/my_pi05      # where outputs/logs/checkpoints are written
+seed: 1000                 # random seed (same seed = reproducible run)
+# ----------------------------------------------------------------------------
+# Usually left as-is:
+# save_checkpoint: true    # whether to save checkpoints at all (false = never write)
+# resume: false            # continue from an existing checkpoint under output_dir
+# ============================================================================
 
 policy:
   type: pi05
