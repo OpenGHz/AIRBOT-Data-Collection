@@ -13,9 +13,12 @@
 #                                `observation.images.`). Set camera_index / size
 #                                to your hardware.
 #   * policy.path             -> your trained checkpoint's pretrained_model dir.
+# HF model downloads go through the domestic hf-mirror.com (no VPN/proxy needed).
+# For a fully offline/air-gapped run, replace these with HF_HUB_OFFLINE: "1" and
+# TRANSFORMERS_OFFLINE: "1" to read only the local HF cache.
 env:
-  HF_HUB_OFFLINE: "1"
-  TRANSFORMERS_OFFLINE: "1"
+  HF_ENDPOINT: "https://hf-mirror.com"
+  HF_HUB_DISABLE_XET: "1"
 
 robot:
   type: airbot_play

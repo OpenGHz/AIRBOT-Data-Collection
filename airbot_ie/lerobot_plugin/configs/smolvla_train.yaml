@@ -30,11 +30,15 @@
 #   pixi run -e smolvla mcap-lerobot-train -c airbot_ie/lerobot_plugin/configs/smolvla_train.yaml
 
 # Process environment for this run. Applied via os.environ.setdefault (a shell
-# env var still wins), and NOT passed to lerobot-train. Weights are expected in
-# the HF cache, so offline mode is safe; drop HF_HUB_OFFLINE for first-run fetch.
+# env var still wins) BEFORE lerobot is imported, and NOT passed to lerobot-train.
+# HF_ENDPOINT points model downloads at the domestic hf-mirror.com, so missing
+# weights are fetched from the CN mirror (no VPN/proxy, no official huggingface.co
+# access needed). HF_HUB_DISABLE_XET is required because the mirror doesn't proxy
+# Xet CAS. For a fully offline/air-gapped run instead, add HF_HUB_OFFLINE: "1"
+# (and TRANSFORMERS_OFFLINE: "1") to read only the local HF cache.
 env:
-  HF_HUB_OFFLINE: "1"
-  TRANSFORMERS_OFFLINE: "1"
+  HF_ENDPOINT: "https://hf-mirror.com"
+  HF_HUB_DISABLE_XET: "1"
   WANDB_MODE: disabled
 
 batch_size: 4              # 8 GiB-friendly starting point; raise if VRAM allows
