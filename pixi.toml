@@ -100,7 +100,8 @@ packaging = ">=24.2,<26"
 # version ranges, and the override below then steers them to the NJU mirror. A
 # dependency-override only *steers* a package already in the graph — it does not
 # introduce one — so lerobot must stay a real dependency here.
-lerobot = { path = "third_party/lerobot", editable = true }
+lerobot = ">=0.6.0"
+# lerobot = { path = "third_party/lerobot", editable = true }
 
 # Force torch/torchvision to resolve from the NJU CUDA 12.8 mirror everywhere in
 # the graph — including the index the vendored lerobot declares in its own
