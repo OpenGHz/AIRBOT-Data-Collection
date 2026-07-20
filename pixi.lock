@@ -1944,7 +1944,7 @@ packages:
 - pypi: ./
   name: airdc
   version: 0.7.8
-  sha256: 79afef33f131354edefca88a369f1d32d09ccee40fa434b464fcd2770cc6bcb3
+  sha256: 315ace1181734994babb9b8f2da6277f7d40d879004d203ccad3a3cf27aa81d0
   requires_dist:
   - cfgable
   - pydantic
@@ -1952,7 +1952,7 @@ packages:
   - more-itertools
   - typing-extensions
   - setproctitle
-  - mcap-data-loader>=0.3.2
+  - mcap-data-loader==0.3.3
   - ruamel-yaml ; extra == 'airbot'
   - opencv-python ; extra == 'cv2'
   - fastapi ; extra == 'web'
@@ -4648,8 +4648,8 @@ packages:
   requires_python: '>=3.7'
 - pypi: ../../MCAP-DataLoader
   name: mcap-data-loader
-  version: 0.3.2
-  sha256: 91896ca793a8ce7917839669accad2c3484c5b99a3edc6a82e01dd50d27ca3b1
+  version: 0.3.3
+  sha256: 208ea72e7dd0fa334bde549446d919be30f0451b6760119ef37b538da366905d
   requires_dist:
   - cfgable[hydra,cli]
   - pydantic-yaml
