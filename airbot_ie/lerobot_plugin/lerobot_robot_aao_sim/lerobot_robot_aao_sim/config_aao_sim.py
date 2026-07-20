@@ -8,7 +8,7 @@ Follows the LeRobot plugin conventions: distribution name starts with
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List, Tuple
 
 from lerobot.robots import RobotConfig
 
@@ -69,3 +69,23 @@ class AAOSimRobotConfig(RobotConfig):
 
     gripper_key: str = "gripper.pos"
     """Feature name for the single gripper DoF (used iff has_gripper)."""
+
+    # --- cameras (rendered by the aao MuJoCo env) ---
+    # NOTE: not named `cameras` — LeRobot's base RobotConfig reserves that
+    # attribute for camera-config objects with .width/.height/.fps and validates
+    # it in __post_init__. Here the value is just the aao camera NAME.
+    sim_cameras: Dict[str, str] = field(default_factory=dict)
+    """Mapping of LeRobot image feature key -> aao camera name. The aao env
+    renders each camera's `<cam_name>/color/image_raw` (H, W, 3) uint8; that frame
+    is exposed under the LeRobot key. Empty = state-only (no images). Example:
+    {"observation.images.wrist": "eef_wrist_cam", "observation.images.env": "env2_cam"}.
+    The camera name must exist in the task_config's env.cameras list."""
+
+    camera_shape: Tuple[int, int, int] = (352, 640, 3)
+    """(H, W, C) advertised in observation_features for every mapped camera.
+    Must match the task_config's cam_height/cam_width (default 352x640x3)."""
+
+    mujoco_gl: str = "glfw"
+    """MuJoCo GL backend for offscreen camera rendering, set on connect if the
+    env has cameras. "glfw" works with a display (X); use "egl" for headless
+    (needs a working EGL vendor setup), or "osmesa" for CPU software rendering."""

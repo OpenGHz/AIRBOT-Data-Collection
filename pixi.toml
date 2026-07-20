@@ -130,9 +130,10 @@ airdc = { path = ".", extras = ["v4l2"], editable = true }
 # pyrealsense2 = "*"
 
 # ---------------------------------------------------------------------------
-# letrain feature (delta over mlbase): the shared "train a lerobot policy from an
-# MCAP dataset" data stack, common to pi0.5 and SmolVLA (and any future VLA).
-# Extracted so the two policy features don't each repeat datasets/av/etc.
+# ledata feature (delta over mlbase): the shared lerobot DATASET stack. Required
+# by BOTH training (mcap-lerobot-train) AND inference (mcap-lerobot-infer ->
+# lerobot.rollout imports `datasets` at module load), so every train/infer env
+# composes it. Extracted so those features don't each repeat datasets/av/etc.
 #   - the non-torchcodec parts of lerobot's [dataset] extra
 #     (datasets/pandas/pyarrow/av/jsonlines) are added explicitly. torchcodec is
 #     intentionally omitted — its prebuilt .so needs a specific FFmpeg and raises
@@ -140,13 +141,13 @@ airdc = { path = ".", extras = ["v4l2"], editable = true }
 #   - mcap-data-loader (provides `mcap_lerobot_train`/`infer` + McapLeRobotDataset)
 #     comes transitively via airdc (editable), so no extra install is needed.
 # ---------------------------------------------------------------------------
-[feature.letrain.dependencies]
+[feature.ledata.dependencies]
 hydra-core = "*"
 # datasets (<5) caps fsspec<=2026.2.0; conda-forge would otherwise pin a newer
 # one (pulled via huggingface_hub) and the pypi solve would fail against it.
 fsspec = ">=2023.1.0,<=2026.2.0"
 
-[feature.letrain.pypi-dependencies]
+[feature.ledata.pypi-dependencies]
 datasets = ">=4.7.0,<5.0.0"
 pandas = ">=2.0.0,<3.0.0"
 pyarrow = ">=21.0.0,<30.0.0"
@@ -154,7 +155,7 @@ av = ">=15.0.0,<16.0.0"
 jsonlines = ">=4.0.0,<5.0.0"
 
 # ---------------------------------------------------------------------------
-# pi05 feature (delta over mlbase+letrain): pi0.5 (LoRA) policy. Migrated from
+# pi05 feature (delta over mlbase+ledata): pi0.5 (LoRA) policy. Migrated from
 # third_party/MCAP-DataLoader/setup_pi05_server.sh (the server-only hacks there —
 # pip mirror config, hf_xet/flash_attn/torchcodec uninstalls, numpy==1.26.4 pin —
 # are dropped; they worked around a blocked mirror + numpy-1 opencv wheels, and
@@ -197,7 +198,7 @@ cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, peft; 
 # block, so no wrapper task is needed.
 
 # ---------------------------------------------------------------------------
-# smolvla feature (delta over mlbase+letrain): SmolVLA, HF's lightweight (~450M)
+# smolvla feature (delta over mlbase+ledata): SmolVLA, HF's lightweight (~450M)
 # VLA — the small-GPU-friendly alternative to pi0.5. smolvla_base is ~907 MB on
 # disk (~0.45 GiB bf16 on GPU), so it fits an 8 GiB card with room to spare.
 #   - lerobot[smolvla] adds transformers + accelerate + num2words on top of
@@ -265,7 +266,7 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
 lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim", editable = true }
 
 # ---------------------------------------------------------------------------
-# Environments (mlbase = shared torch + lerobot base; letrain = shared dataset
+# Environments (mlbase = shared torch + lerobot base; ledata = shared dataset
 # stack; default is implicit in all)
 #   - default:       base (non-ROS) deps only.
 #   - collect:       data-collection stack (airdc[all,airbot] + libturbojpeg);
@@ -275,21 +276,21 @@ lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim
 #                    real arm).
 #   - infer-aao:     mlbase + aao stack (auto-atom MuJoCo/gs) — run a LeRobot
 #                    policy in simulation, no real hardware.
-#   - pi05:          mlbase + letrain + pi0.5 policy (train). ~3.6B, needs a big GPU.
+#   - pi05:          mlbase + ledata + pi0.5 policy (train). ~3.6B, needs a big GPU.
 #   - pi05-infer:    pi05 + airbot robot, i.e. run a trained pi0.5 policy on the arm.
-#   - smolvla:       mlbase + letrain + SmolVLA policy (train). ~450M, fits 8 GiB.
+#   - smolvla:       mlbase + ledata + SmolVLA policy (train). ~450M, fits 8 GiB.
 #   - smolvla-infer: smolvla + airbot robot, i.e. run a trained SmolVLA policy on the arm.
 # lerobot extras are unioned per environment by pixi.
 # ---------------------------------------------------------------------------
 [environments]
 collect = ["collect"]
 ros = ["ros", "aao"]
-# `letrain` carries the lerobot dataset stack (datasets/pandas/av/...), which
+# `ledata` carries the lerobot dataset stack (datasets/pandas/av/...), which
 # `lerobot.rollout` (= what mcap-lerobot-infer runs) requires at import — not
 # just training. So every inference env needs it too.
-infer-airbot = ["mlbase", "letrain", "airbot"]
-infer-aao = ["mlbase", "letrain", "aao"]
-pi05 = ["mlbase", "letrain", "pi05"]
-pi05-infer = ["mlbase", "letrain", "airbot", "pi05"]
-smolvla = ["mlbase", "letrain", "smolvla"]
-smolvla-infer = ["mlbase", "letrain", "airbot", "smolvla"]
+infer-airbot = ["mlbase", "ledata", "airbot"]
+infer-aao = ["mlbase", "ledata", "aao"]
+pi05 = ["mlbase", "ledata", "pi05"]
+pi05-infer = ["mlbase", "ledata", "airbot", "pi05"]
+smolvla = ["mlbase", "ledata", "smolvla"]
+smolvla-infer = ["mlbase", "ledata", "airbot", "smolvla"]

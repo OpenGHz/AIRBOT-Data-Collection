@@ -4,13 +4,13 @@
 #   pixi run -e infer-aao mcap-lerobot-infer \
 #     -c airbot_ie/lerobot_plugin/configs/aao_sim_infer.yaml
 #
-# State-only, EEF-pose: observation.state / action = EEF position(3) +
-# orientation(4, xyzw) + gripper(1). Match state/action keys + task_config to
-# whatever the checkpoint was trained on (the MCAP eef-pose configs use exactly
-# position+orientation). No cameras yet (avoids headless-EGL).
+# Observation = EEF pose (position 3 + orientation xyzw 4 + gripper 1) plus the
+# rendered camera frames below. Action = the EEF pose. Match state/action keys,
+# task_config, and sim_cameras to whatever the checkpoint was trained on (the
+# MCAP eef-pose configs use exactly position+orientation).
 env:
-  HF_HUB_OFFLINE: "1"
-  TRANSFORMERS_OFFLINE: "1"
+  HF_ENDPOINT: "https://hf-mirror.com"
+  HF_HUB_DISABLE_XET: "1"
 
 robot:
   type: aao_sim
@@ -21,6 +21,14 @@ robot:
   has_gripper: true
   # position_keys / orientation_keys / gripper_key default to eef.{x,y,z} +
   # eef.{qx,qy,qz,qw} + gripper.pos; override to match the checkpoint's features.
+  # Cameras rendered by the sim (MuJoCo offscreen). Map LeRobot image key -> aao
+  # camera name; the names must exist in the task_config's env.cameras (the door
+  # scene has eef_wrist_cam + env2_cam at 640x352). camera_shape must match.
+  sim_cameras:
+    observation.images.wrist: eef_wrist_cam
+    observation.images.env: env2_cam
+  camera_shape: [352, 640, 3]
+  mujoco_gl: glfw            # has a display -> GLFW; headless: egl / osmesa
 
 policy:
   path: outputs/train/my_run/checkpoints/last/pretrained_model

@@ -22,6 +22,7 @@ from .config_aao_sim import AAOSimRobotConfig
 _POSE_POS = "{op}/pose/position"
 _POSE_ORI = "{op}/pose/orientation"
 _EEF_JS = "eef/joint_state/position"  # gripper joint (best-effort)
+_CAM_COLOR = "{cam}/color/image_raw"  # aao color obs key (flat/unstructured mode)
 
 
 def _as_xyz(data: Any) -> List[float]:
@@ -64,7 +65,10 @@ class AAOSimRobot(Robot):
 
     @property
     def observation_features(self) -> dict:
-        return {name: float for name in self._state_names}
+        ft: Dict[str, Any] = {name: float for name in self._state_names}
+        for key in self.config.sim_cameras:
+            ft[key] = tuple(self.config.camera_shape)
+        return ft
 
     @property
     def action_features(self) -> dict:
@@ -91,6 +95,12 @@ class AAOSimRobot(Robot):
         if self.is_connected:
             raise RuntimeError(f"{self} is already connected.")
         import os
+
+        # Choose the MuJoCo GL backend for offscreen camera rendering BEFORE
+        # importing auto_atom/mujoco (the backend is picked at import time). Only
+        # needed when cameras are used; harmless otherwise.
+        if self.config.sim_cameras:
+            os.environ.setdefault("MUJOCO_GL", self.config.mujoco_gl)
 
         import auto_atom
         from auto_atom import load_task_file_hydra
@@ -149,6 +159,11 @@ class AAOSimRobot(Robot):
             obs[self.config.gripper_key] = (
                 float(np.asarray(grip).reshape(-1)[0]) if grip is not None else 0.0
             )
+
+        # Camera frames: aao renders <cam_name>/color/image_raw as (H, W, 3) uint8.
+        for feature_key, cam_name in self.config.sim_cameras.items():
+            frame = raw[_CAM_COLOR.format(cam=cam_name)]["data"]
+            obs[feature_key] = np.asarray(frame, dtype=np.uint8)
         return obs
 
     def send_action(self, action: Dict[str, Any]) -> Dict[str, Any]:

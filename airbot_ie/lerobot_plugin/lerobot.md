@@ -106,7 +106,7 @@ pixi run -e infer-aao mcap-lerobot-infer \
   -c airbot_ie/lerobot_plugin/configs/aao_sim_infer.yaml
 ```
 
-改 `robot.task_config`（仿真场景/机型）、`policy.path`，以及 `position_keys`/`orientation_keys`/`gripper_key`（对齐 checkpoint 的 eef 位姿特征）。策略需在匹配的 eef 位姿特征上训练（MCAP 的 eef 位姿配置即是）。
+观测 = EEF 位姿（位置+四元数+夹爪）+ 仿真渲染的相机帧（默认带 `eef_wrist_cam`/`env2_cam` 两路 `(352,640,3)`）。改 `robot.task_config`（仿真场景/机型）、`policy.path`、`position_keys`/`orientation_keys`/`gripper_key` 与 `sim_cameras`（对齐 checkpoint 的特征）。相机走 MuJoCo 离屏渲染：有显示器用 `mujoco_gl: glfw`，无头用 `egl`/`osmesa`。`sim_cameras` 的相机名须在该 `task_config` 的 `env.cameras` 中，`camera_shape` 对上其分辨率。
 
 ---
 
