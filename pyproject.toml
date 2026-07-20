@@ -18,7 +18,7 @@ dependencies = [
     "typing-extensions",
     "setproctitle",
     # "hydra-joblib-launcher",
-    "mcap-data-loader ==0.3.2",
+    "mcap-data-loader ==0.3.3",
 ]
 urls = { repository = "https://github.com/OpenGHz/AIRBOT-Data-Collection" }
 
