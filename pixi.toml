@@ -12,10 +12,16 @@ version = "0.1.0"
 
 # Default to domestic (CN) PyPI mirrors for all pypi-dependencies.
 [pypi-options]
-index-url = "https://pypi.mirrors.ustc.edu.cn/simple"
+# In uv/pixi, `extra-index-urls` take PRIORITY over `index-url` (index-url is the
+# lowest-priority fallback, defaulting to official PyPI when omitted). So the CN
+# mirrors we actually want to serve packages live in extra-index-urls, in
+# priority order; the omitted index-url leaves official PyPI as the last resort.
+#   effective order: USTC -> Aliyun -> pypi.org (default fallback)
+# Note: use the 301 TARGET host `mirrors.ustc.edu.cn/pypi/simple`, NOT
+# `pypi.mirrors.ustc.edu.cn/simple` (the latter 301-redirects).
 extra-index-urls = [
+    "https://mirrors.ustc.edu.cn/pypi/simple",
     "https://mirrors.aliyun.com/pypi/simple/",
-    "https://pypi.org/simple/",
 ]
 
 [tasks]
@@ -278,8 +284,11 @@ lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim
 [environments]
 collect = ["collect"]
 ros = ["ros", "aao"]
-infer-airbot = ["mlbase", "airbot"]
-infer-aao = ["mlbase", "aao"]
+# `letrain` carries the lerobot dataset stack (datasets/pandas/av/...), which
+# `lerobot.rollout` (= what mcap-lerobot-infer runs) requires at import — not
+# just training. So every inference env needs it too.
+infer-airbot = ["mlbase", "letrain", "airbot"]
+infer-aao = ["mlbase", "letrain", "aao"]
 pi05 = ["mlbase", "letrain", "pi05"]
 pi05-infer = ["mlbase", "letrain", "airbot", "pi05"]
 smolvla = ["mlbase", "letrain", "smolvla"]
