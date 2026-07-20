@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lerobot_robot_aao_sim"
+version = "0.1.0"
+description = "LeRobot Robot plugin: run a LeRobot policy in the auto-atomic-operation (aao) MuJoCo simulator (state-only, EEF-pose control)."
+readme = "README.md"
+requires-python = ">=3.10"
+# lerobot + auto-atomic-operation are provided by the parent repo's pixi `aao`
+# feature (both editable there); not pinned here.
+dependencies = [
+    "lerobot",
+    "numpy",
+]
+
+# LeRobot auto-discovers plugins whose distribution name starts with
+# `lerobot_robot_`. `--robot.type=aao_sim` is registered via
+# `@RobotConfig.register_subclass("aao_sim")` in config_aao_sim.py.
+[tool.hatch.build.targets.wheel]
+packages = ["lerobot_robot_aao_sim"]

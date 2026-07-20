@@ -1,0 +1,30 @@
+# Policy inference in the auto-atomic-operation (aao) MuJoCo SIM, via
+# `mcap-lerobot-infer` (routes to lerobot-rollout). No real hardware.
+#
+#   pixi run -e infer-aao mcap-lerobot-infer \
+#     -c airbot_ie/lerobot_plugin/configs/aao_sim_infer.yaml
+#
+# State-only, EEF-pose: observation.state / action = EEF position(3) +
+# orientation(4, xyzw) + gripper(1). Match state/action keys + task_config to
+# whatever the checkpoint was trained on (the MCAP eef-pose configs use exactly
+# position+orientation). No cameras yet (avoids headless-EGL).
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+robot:
+  type: aao_sim
+  task_config: open_door_airbot_play_g2p   # complete aao task (scene + robot + IK)
+  operator: arm
+  kinematic: false
+  substeps: 1
+  has_gripper: true
+  # position_keys / orientation_keys / gripper_key default to eef.{x,y,z} +
+  # eef.{qx,qy,qz,qw} + gripper.pos; override to match the checkpoint's features.
+
+policy:
+  path: outputs/train/my_run/checkpoints/last/pretrained_model
+
+task: "pick and place the block"   # same instruction used during data recording
+fps: 30
+duration: 0                        # 0 = run until interrupted

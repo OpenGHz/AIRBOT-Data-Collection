@@ -254,6 +254,9 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
     "mujoco",
     "gs",
 ], editable = true }
+# LeRobot Robot plugin to run a policy in the aao MuJoCo sim (state-only, EEF
+# pose). Editable so `--robot.type=aao_sim` is discoverable in infer-aao.
+lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim", editable = true }
 
 # ---------------------------------------------------------------------------
 # Environments (mlbase = shared torch + lerobot base; letrain = shared dataset

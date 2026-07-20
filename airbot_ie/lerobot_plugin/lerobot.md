@@ -97,6 +97,17 @@ pixi run -e $POLICY-infer mcap-lerobot-infer \
   -c airbot_ie/lerobot_plugin/configs/${POLICY}_infer_real.yaml
 ```
 
+### 2c. 仿真（MuJoCo，无硬件）
+
+在 auto-atomic-operation 仿真里跑策略，用 `infer-aao` 环境 + `aao_sim` 机器人（纯本体 EEF 位姿状态，暂无相机）：
+
+```bash
+pixi run -e infer-aao mcap-lerobot-infer \
+  -c airbot_ie/lerobot_plugin/configs/aao_sim_infer.yaml
+```
+
+改 `robot.task_config`（仿真场景/机型）、`policy.path`，以及 `position_keys`/`orientation_keys`/`gripper_key`（对齐 checkpoint 的 eef 位姿特征）。策略需在匹配的 eef 位姿特征上训练（MCAP 的 eef 位姿配置即是）。
+
 ---
 
 ## 要点
