@@ -21,7 +21,7 @@ environments:
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/certifi-2026.6.17-pyhd8ed1ab_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/click-8.4.2-pyhc90fa1f_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
-      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/cpython-3.14.6-py314hd8ed1ab_100.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/cpython-3.12.13-py312hd8ed1ab_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/exceptiongroup-1.3.1-pyhd8ed1ab_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/filelock-3.31.0-pyhd8ed1ab_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/fsspec-2026.6.0-pyhd8ed1ab_0.conda
@@ -42,12 +42,14 @@ environments:
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libexpat-2.8.1-hecca717_1.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libffi-3.5.2-h3435931_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libgcc-15.2.0-he0feb66_19.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libgcc-ng-15.2.0-h69a702a_19.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libgomp-15.2.0-he0feb66_19.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libjpeg-turbo-3.2.0-hb03c661_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/liblzma-5.8.3-hb03c661_0.conda
-      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libmpdec-4.0.0-hb03c661_1.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libnsl-2.0.1-hb9d3cd8_1.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libsqlite-3.53.3-h0c1763c_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libuuid-2.42.2-h5347b49_0.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libxcrypt-4.4.36-hd590300_1.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_2.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/natsort-8.4.0-pyhcf101f3_2.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/ncurses-6.6-hdb14827_0.conda
@@ -57,10 +59,10 @@ environments:
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/pluggy-1.6.0-pyhf9edf01_1.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/pytest-9.1.1-pyhc364b38_2.conda
-      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/python-3.14.6-habeac84_100_cp314.conda
-      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/python-gil-3.14.6-h4df99d1_100.conda
-      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/python_abi-3.14-8_cp314.conda
-      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/pyyaml-6.0.3-py314h67df5f8_1.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/python-3.12.13-hd63d673_0_cpython.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/python-gil-3.12.13-hd8ed1ab_0.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/python_abi-3.12-8_cp312.conda
+      - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/pyyaml-6.0.3-py312h8a5da7c_1.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/readline-8.3-h853b02a_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/setuptools-83.0.0-pyh332efcf_0.conda
       - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_2.conda
@@ -79,31 +81,31 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/8c/7b/1fc1c09cc0756cf25861a3be10565915953876da48bb228fb9a672b20a42/cachetools-7.1.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/ef/2f/c5464532e965badff2f4c4c1a3a83f5697f0d7c407ed0cda44aaa99bb451/certifi-2026.6.17-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/9c/f9/a071252729e5ea6a830ab21b1bafb5956348869dde74b3b26cbf47050f25/cfgable-0.1.1-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/f4/c4/b3e049d2aa3766180c78507110543d9d50894cc97f57de543f1be521dcdc/charset_normalizer-3.4.9-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/01/c4/4fa4c8b3097a11f3c5f09a35b72ed6855fb1d332469504962ab7bafcc702/charset_normalizer-3.4.9-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/a5/f5/397b61091120a9ca5001041dd7bf76c385b3bfd67a0e5bcb74b852bd22a4/evdev-1.9.3.tar.gz
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/72/9f/485516087cd8c44183aaf9ab850247a28e2e4a42a4d62eab77c21f673450/flatten_dict-0.5.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/af/1c/b70ea8fbc6de3abd4f5c7c53ce596d96181050df0060f7892a48023523b0/foxglove_schemas_flatbuffer-0.3.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/69/e1/4b21b5017c33f3600dcc32b802bb48fe44a4d36d6c066f52650c7c2690fa/grpcio-1.70.0.tar.gz
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/c1/fe/3adf1035c1f9e9243516530beae67e197f2acc17562ec75f03a0ba77fc55/grpcio_tools-1.70.0.tar.gz
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/ae/50/64c94cfc4db8d9ed07da71427a936b5a2bd2b27c66269b42fbda82c7c7a4/grpcio-1.70.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e2/fb/8442f386fa71056abe7ebbc153eaac8cbe32875ed659a641ca526ab9f341/grpcio_tools-1.70.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/a5/cc/64d0fad725570ed6a02f5c7676cbfe3a268bed2fc3b10a74b59425ce6386/hydra_zen-0.16.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/1e/5e/d4e9f1a599fb8e573b7b87160658329fbf28d19eac2718f51fc3def3aa5a/idna-3.18-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/59/91/aa6bde563e0085a02a435aa99b49ef75b0a4b062635e606dab23ce18d720/inflection-0.5.1-py2.py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/8a/d8/6ce2855fda8123ff7d127821743de7aa1609cda025183b9c4046d5b36205/linuxpy-0.24.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/f1/01/d52c7b11eaa286d49dae619c0eec4aabc0bf3cda7a7467eb77c62c4471f3/lz4-4.4.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/55/d9/e3867222474f6c1b76e89f3bd914595af69f55bf2c1866e984c548afdc15/lz4-4.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/32/67/347c395a0bee250a3ebba6584d115737298f445c6f15fcfb1aac9c3c9319/mcap_data_loader-0.3.3-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/41/5f/0f992cb24560673496c5d68de61913b57166ce530ffda07c1f280e0cc464/numpy-2.5.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b8/a9/6e73d68500f80773f65f0654ea932019d6694329a0eb0ed0533de38df376/numpy-2.5.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/cf/4c/c73f828fdbcd37eaf21d08fa852544a3ca7c2dbb3ea76873d64f2ea413d1/opencv_python-5.0.0.93-cp37-abi3-manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e3/dd/cadd6ec43069247d91f6345fa7a0d2858bef6af366dbd7ba8f05d2c77d3b/protobuf-5.29.6-cp38-abi3-manylinux2014_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/fd/7b/122376b1fd3c62c1ed9dc80c931ace4844b3c55407b6fb2d199377c9736f/pydantic-2.13.4-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/89/1d/8eff589b45bb8190a9d12c49cfad0f176a5cbd1534908a6b5125e2886239/pydantic_core-2.46.4-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5f/97/2aab507d3d00ca626e8e57c1eac6a79e4e5fbcc63eb99733ff55d1717f65/pydantic_core-2.46.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/77/c1/6e422f34e569cf8e18df68d1939c81c099d2b61e4f7d9621c8a77560799c/pydantic_settings-2.14.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/53/a5/198079eb0445eeaa28c732e2b87df7e2bf3452a8823a8774398b4104b674/pydantic_yaml-1.7.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/ac/97/6fce53da5757206d60048c0e0b8a3d9f5546301d676198c6dda489e8b716/pymcap-0.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/6d/98/bbeb760852adb27f166ce1617f0e51aabb15f21b1e60ea703f2aed3c78ac/pynput-1.8.2-py2.py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/a7/ce/3062bf51bc0d98a344b9ed229a40535f6f1d309fc9ffaf34719b67ed3e21/pynvvideocodec-2.0.4-cp314-cp314-manylinux_2_28_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/ca/49/98da271686e00676f41b1197ba5431ddc341b96d8efb68ea9d68e2b0d870/pynvvideocodec-2.0.4-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/fc/b8/ff33610932e0ee81ae7f1269c890f697d56ff74b9f5b2ee5d9b7fa2c5355/python_xlib-0.33-py2.py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/6c/e4/b19be937c95df9a02d6337178088b56fe77c2656eab46489344c7ac510e9/pyturbojpeg-2.5.0-py3-none-any.whl
@@ -112,7 +114,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b8/0c/51f6841f1d84f404f92463fc2b1ba0da357ca1e3db6b7fbda26956c3b82a/ruamel_yaml-0.19.1-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/1c/78/504fdd027da3b84ff1aecd9f6957e65f35134534ccc6da8628eb71e76d3f/send2trash-2.1.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/ab/26/8e3bb082992f19823d831f3d62a89409deb6092e72fc6940962983ffc94f/setproctitle-1.3.7-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/d0/99/71630546b9395b095f4082be41165d1078204d1696c2d9baade3de3202d0/setproctitle-1.3.7-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5d/40/e1e72872c6354b306daef1703549e8e83b4d43cfea356311bf722a043752/setuptools-83.0.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/33/d1/8bb87d21e9aeb323cc03034f5eaf2c8f69841e40e4853c2627edf8111ed3/termcolor-3.3.0-py3-none-any.whl
@@ -123,7 +125,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/7f/3e/5db95bcf282c52709639744ca2a8b149baccf648e39c8cc87553df9eae0c/urllib3-2.7.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/31/dc/cc50210e11e465c975462439a492516a73300ab8caa8f5e0902544fd748b/zstandard-0.25.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/53/60/7be26e610767316c028a2cbedb9a3beabdbe33e2182c373f71a1c0b88f36/zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: ./
       - pypi: ./airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl
   default:
@@ -3126,28 +3128,12 @@ packages:
   purls: []
   size: 7578
   timestamp: 1748320126956
-- pypi: https://mirrors.ustc.edu.cn/pypi/packages/69/e1/4b21b5017c33f3600dcc32b802bb48fe44a4d36d6c066f52650c7c2690fa/grpcio-1.70.0.tar.gz
-  name: grpcio
-  version: 1.70.0
-  sha256: 8d1584a68d5922330025881e63a6c1b54cc8117291d382e4fa69339b6d914c56
-  requires_dist:
-  - grpcio-tools>=1.70.0 ; extra == 'protobuf'
-  requires_python: '>=3.8'
 - pypi: https://mirrors.ustc.edu.cn/pypi/packages/ae/50/64c94cfc4db8d9ed07da71427a936b5a2bd2b27c66269b42fbda82c7c7a4/grpcio-1.70.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
   name: grpcio
   version: 1.70.0
   sha256: 2394e3381071045a706ee2eeb6e08962dd87e8999b90ac15c55f56fa5a8c9597
   requires_dist:
   - grpcio-tools>=1.70.0 ; extra == 'protobuf'
-  requires_python: '>=3.8'
-- pypi: https://mirrors.ustc.edu.cn/pypi/packages/c1/fe/3adf1035c1f9e9243516530beae67e197f2acc17562ec75f03a0ba77fc55/grpcio_tools-1.70.0.tar.gz
-  name: grpcio-tools
-  version: 1.70.0
-  sha256: e578fee7c1c213c8e471750d92631d00f178a15479fb2cb3b939a07fc125ccd3
-  requires_dist:
-  - protobuf>=5.26.1,<6.0.dev0
-  - grpcio>=1.70.0
-  - setuptools
   requires_python: '>=3.8'
 - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e2/fb/8442f386fa71056abe7ebbc153eaac8cbe32875ed659a641ca526ab9f341/grpcio_tools-1.70.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
   name: grpcio-tools
@@ -4969,6 +4955,11 @@ packages:
   version: 2.5.1
   sha256: 54ad769f17bc2d833b620851989f62054fb9ab93c969d9e1dc3c8e3d56beea21
   requires_python: '>=3.12'
+- pypi: https://mirrors.ustc.edu.cn/pypi/packages/b8/a9/6e73d68500f80773f65f0654ea932019d6694329a0eb0ed0533de38df376/numpy-2.5.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+  name: numpy
+  version: 2.5.1
+  sha256: 59fda5e192b570217ec2580c96f00e9a7e12ef6866a900eb089b62c1a32545ca
+  requires_python: '>=3.12'
 - conda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/linux-64/numpy-2.5.1-py312h33ff503_0.conda
   sha256: 2941c4a5fee88fe1c91c0d95b65e3a292d078f6655b53ff60f4813a44349c83e
   md5: 3b7525d598ec0d0365ebd2378160a02f
@@ -5687,6 +5678,11 @@ packages:
   name: pynvvideocodec
   version: 2.0.4
   sha256: d9ec06f47bca7b20a6e8234afaf596699c57a477be292613d676802e7e808ed2
+  requires_python: '>=3.8'
+- pypi: https://mirrors.ustc.edu.cn/pypi/packages/ca/49/98da271686e00676f41b1197ba5431ddc341b96d8efb68ea9d68e2b0d870/pynvvideocodec-2.0.4-cp312-cp312-manylinux_2_28_x86_64.whl
+  name: pynvvideocodec
+  version: 2.0.4
+  sha256: b59cec7a1a3f78fad13fead78cad8b6d9686827f9ff4477080245457675a01d0
   requires_python: '>=3.8'
 - pypi: https://mirrors.ustc.edu.cn/pypi/packages/67/dd/99ab1d310aaadc7e20d434cf27b387a5a0878f1dfbb3788c365905647c7b/pynvvideocodec-2.1.0-cp312-cp312-manylinux_2_28_x86_64.whl
   name: pynvvideocodec

@@ -259,6 +259,12 @@ cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2wo
 # therefore live in different environments.
 # ---------------------------------------------------------------------------
 [feature.collect.dependencies]
+# Pin python to 3.12 (like the ML envs). Without this, collect has no python
+# constraint and pixi picks the newest conda-forge python (3.14), for which
+# airbot_py's hard pin `grpcio==1.70.0` has NO wheel — so it falls back to
+# building grpcio from source (slow, needs a toolchain, often hangs). 3.12 uses
+# the prebuilt grpcio 1.70.0 cp312 wheel.
+python = ">=3.12,<3.13"
 libjpeg-turbo = "*"       # libturbojpeg.so for PyTurboJPEG (apt equivalent: libturbojpeg)
 
 [feature.collect.pypi-dependencies]
