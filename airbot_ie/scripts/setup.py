@@ -20,7 +20,7 @@ from airdc.common.utils.system_info import SystemInfo
 from airdc.basis import PACKAGE_NAME, Bcolors
 from collections import defaultdict
 from pprint import pformat
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from pydantic_settings import CliApp
 from typing import List, Dict
 from importlib.metadata import version
@@ -96,10 +96,17 @@ cur_dir = Path(__file__).parent.resolve()
 class SetupConfig(BaseModelWithFieldAliases):
     """Configuration for the setup script of airbot data collection."""
 
+    # Numeric CLI values (e.g. `--ic 0` for a camera device number) are parsed as
+    # ints by pydantic-settings; coerce them back to str for the identifier lists.
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     ignore_cameras: List[str] = Field(
         [],
         validation_alias="ic",
-        description="Ignore cameras by their bus_info or serial_number",
+        description=(
+            "Ignore cameras by their bus_info, serial_number, /dev/videoN path, or "
+            "device number N (e.g. 0 for the built-in laptop camera at /dev/video0)."
+        ),
     )
     can_interfaces: List[str] = Field(
         [],
@@ -315,10 +322,17 @@ if configure_arms and not args.arm_urls:
 
 all_cam_devices = find_video_capture_devices(True)
 realsense_buses = []
+ignore_cameras = set(args.ignore_cameras)
 logger.info(Bcolors.cyan(f"Found v4l2 devices: \n{pformat(all_cam_devices)}"))
 for device_key in list(all_cam_devices.keys()):
     bus_id = device_key[1]
-    if bus_id in args.ignore_cameras:
+    filenames = all_cam_devices[device_key]
+    # A camera can be ignored by its bus_info, a `/dev/videoN` path, or the bare
+    # device number `N` (e.g. `0` for the built-in laptop camera at /dev/video0).
+    identifiers = {bus_id, *filenames} | {
+        fn.removeprefix("/dev/video") for fn in filenames
+    }
+    if identifiers & ignore_cameras:
         all_cam_devices.pop(device_key)
     elif "RealSense" in device_key[0]:
         # remove realsense cameras from the v4l2 devices
