@@ -42,7 +42,8 @@ def parse_args() -> argparse.Namespace:
         description="Run N airdc processes in parallel and report average update frequency."
     )
     parser.add_argument(
-        "-n", "--num-workers",
+        "-n",
+        "--num-workers",
         type=int,
         required=True,
         help="Number of parallel airdc processes to launch.",
@@ -52,8 +53,8 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Comma-separated GPU IDs to distribute workers across, e.g. '0,1,2'. "
-             "Workers are assigned round-robin. If not set, inherits the current "
-             "CUDA_VISIBLE_DEVICES environment variable.",
+        "Workers are assigned round-robin. If not set, inherits the current "
+        "CUDA_VISIBLE_DEVICES environment variable.",
     )
     parser.add_argument(
         "--command",
@@ -122,7 +123,15 @@ def main() -> int:
             # Isolate children from terminal SIGINT; we send it explicitly.
             preexec_fn=os.setpgrp,
         )
-        workers.append({"proc": proc, "log_file": log_file, "log_path": log_path, "id": i, "gpu": assigned_gpu})
+        workers.append(
+            {
+                "proc": proc,
+                "log_file": log_file,
+                "log_path": log_path,
+                "id": i,
+                "gpu": assigned_gpu,
+            }
+        )
         print(f"  Worker {i}: PID {proc.pid}, GPU {assigned_gpu}")
 
     print()
@@ -212,7 +221,9 @@ def main() -> int:
     total = sum(freqs)
 
     print(f"Workers with data: {n_ok}/{n}")
-    print(f"Per-worker freq:   mean={avg:.4f} Hz, min={min(freqs):.4f} Hz, max={max(freqs):.4f} Hz, std={sd:.4f} Hz")
+    print(
+        f"Per-worker freq:   mean={avg:.4f} Hz, min={min(freqs):.4f} Hz, max={max(freqs):.4f} Hz, std={sd:.4f} Hz"
+    )
     print(f"Aggregate throughput (sum): {total:.4f} Hz")
     print(f"\nLog directory: {log_dir.resolve()}")
 

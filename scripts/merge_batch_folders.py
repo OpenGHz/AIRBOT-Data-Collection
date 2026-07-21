@@ -57,7 +57,9 @@ def collect_source_dirs(root: Path) -> list[Path]:
     return all_dirs
 
 
-def build_plan(source_files: list[Path], root: Path, start_index: int) -> list[tuple[Path, Path]]:
+def build_plan(
+    source_files: list[Path], root: Path, start_index: int
+) -> list[tuple[Path, Path]]:
     plan: list[tuple[Path, Path]] = []
     index = start_index
     for src in source_files:
@@ -67,7 +69,9 @@ def build_plan(source_files: list[Path], root: Path, start_index: int) -> list[t
     return plan
 
 
-def execute_plan(plan: list[tuple[Path, Path]], source_dirs: list[Path], dry_run: bool) -> None:
+def execute_plan(
+    plan: list[tuple[Path, Path]], source_dirs: list[Path], dry_run: bool
+) -> None:
     if not plan:
         print("No files found in subfolders. Nothing to do.")
         return
@@ -109,7 +113,9 @@ def execute_plan(plan: list[tuple[Path, Path]], source_dirs: list[Path], dry_run
             subdir.rmdir()
             removed_count += 1
 
-    print(f"Done. Moved and renamed {len(plan)} files. Removed {removed_count} empty folders.")
+    print(
+        f"Done. Moved and renamed {len(plan)} files. Removed {removed_count} empty folders."
+    )
 
 
 def main() -> None:
