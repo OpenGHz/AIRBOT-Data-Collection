@@ -32,3 +32,10 @@ visualizer: null
 # provides ${remap_func}).
 sampler:
   key_remap: ${remap_func}
+
+enable_color: true
+enable_depth: false
+enable_mask: false
+enable_heat_map: false
+
+batch_size: 1
