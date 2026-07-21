@@ -69,6 +69,7 @@ class DemonstrateInterface:
         self._round_data = defaultdict(list)
         self._metrics = defaultdict(dict)
         self._finished = False
+        self._sampling_tick = 0
         """other """
         self._register_fsm_callbacks()
 
@@ -151,6 +152,7 @@ class DemonstrateInterface:
             self._config.dataset.absolute_directory, self._sample_info.episode
         )
         self._bar.reset(desc=f"Episode {self._sample_info.episode}")
+        self._sampling_tick = 0
         return True
 
     def capture(self, warm_up: bool = False) -> Dict[str, Any]:
@@ -187,6 +189,13 @@ class DemonstrateInterface:
                 f"Sample limitation reached: {info.index} samples"
             )
             return False
+        # Approach-2 downsampling: skip capture+save on intermediate ticks
+        sample_every = self._config.sample_every
+        skip = sample_every > 1 and (self._sampling_tick % sample_every) != 0
+        self._sampling_tick += 1
+        if skip:
+            # Simulation still steps (via the other manager); we just don't capture/save
+            return self._action_ok(DemonstrateAction.update)
         else:
             start = time.perf_counter()
             # TODO: Should use a .copy() to avoid the data being updated in-place within the demonstrator, which could lead to data overwriting issues during asynchronous updating?
@@ -288,6 +297,7 @@ class DemonstrateInterface:
         self._modules.sampler.clear()
         self._sample_info.index = 0
         self._save_path = ""
+        self._sampling_tick = 0
 
     def _use_executor(self, action: DemonstrateAction) -> bool:
         return action in self._action_executors

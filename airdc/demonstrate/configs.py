@@ -5,6 +5,7 @@ from pydantic import (
     BaseModel,
     NonNegativeFloat,
     NonNegativeInt,
+    PositiveInt,
     ConfigDict,
     computed_field,
     field_validator,
@@ -166,6 +167,15 @@ class DemonstrateConfig(DemonstrateModules):
     It will be applied after key_merge."""
     progress_bar: bool = True
     """Whether to use progress bar for data collection."""
+    sample_every: PositiveInt = 1
+    """Capture and save data every ``sample_every`` tick(s) during the sampling
+    state (approach-2 replay downsampling).  ``1`` (default) captures every
+    tick.  Values >1 skip intermediate ticks, reducing the number of saved
+    frames and the rendering/encoding cost, while the simulation still steps at
+    full resolution (preserving trajectory fidelity).  Orthogonal to
+    ``demo_stride`` (which reduces the number of replay actions on the runner
+    side).  The ``sample_limit.size`` threshold is checked against saved frames,
+    not total ticks."""
 
     @field_validator("send_actions", mode="after")
     def validate_send_actions(cls, v):
