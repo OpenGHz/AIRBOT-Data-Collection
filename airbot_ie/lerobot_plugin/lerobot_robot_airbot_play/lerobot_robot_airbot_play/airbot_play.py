@@ -54,6 +54,21 @@ class AIRBOTPlayRobot(Robot):
         return ft
 
     @property
+    def _pose_ft(self) -> Dict[str, type]:
+        # EEF pose: position xyz (3) + orientation quaternion xyzw (4) + gripper (1).
+        # Order [position, orientation, gripper] must match the training concat order.
+        ft = {name: float for name in self.config.position_keys}
+        ft.update({name: float for name in self.config.orientation_keys})
+        if self._has_eef:
+            ft[f"{self.config.gripper_joint_name}.pos"] = float
+        return ft
+
+    @property
+    def _state_ft(self) -> Dict[str, type]:
+        """State/action feature contract for the active control mode."""
+        return self._pose_ft if self.config.control_mode == "pose" else self._motors_ft
+
+    @property
     def _cameras_ft(self) -> Dict[str, tuple]:
         return {
             key: (spec.height, spec.width, 3)
@@ -62,11 +77,11 @@ class AIRBOTPlayRobot(Robot):
 
     @property
     def observation_features(self) -> dict:
-        return {**self._motors_ft, **self._cameras_ft}
+        return {**self._state_ft, **self._cameras_ft}
 
     @property
     def action_features(self) -> dict:
-        return self._motors_ft
+        return self._state_ft
 
     # ------------------------------------------------------------------ #
     # Connection lifecycle
@@ -89,13 +104,48 @@ class AIRBOTPlayRobot(Robot):
                 AIRBOTPlay as _System,
                 AIRBOTPlayConfig as _SystemConfig,
             )
-        sys_cfg = _SystemConfig(
+        sys_kwargs: Dict[str, Any] = dict(
             url=self.config.url,
             port=self.config.port,
             backend=self.config.backend,
             components=list(self.config.components),
         )
-        return _System(sys_cfg)
+        if self.config.control_mode == "pose":
+            sys_kwargs["action"] = self._pose_action_configs()
+        return _System(_SystemConfig(**sys_kwargs))
+
+    def _pose_action_configs(self) -> list:
+        """airdc per-component action config for EEF-pose inference.
+
+        The arm servos in cartesian pose during SAMPLING (policy rollout) but
+        homes in joint space during RESETTING, so ``initial_pose`` / homing keep
+        working with joint values. The eef (gripper) stays a joint command, driven
+        independently of the arm's SERVO_CART_POSE mode. Absolute pose (default
+        reference_mode=ABSOLUTE) matches the absolute-pose training data.
+        """
+        from airdc.common.configs.control import (
+            JointPositionPlan,
+            JointPositionServo,
+            PoseServo,
+        )
+
+        action = []
+        for comp in self.config.components:
+            if comp == "arm":
+                action.append(
+                    {
+                        SystemMode.RESETTING: JointPositionPlan(),
+                        SystemMode.SAMPLING: PoseServo(),
+                    }
+                )
+            else:  # eef gripper: joint command, independent of the arm's mode
+                action.append(
+                    {
+                        SystemMode.RESETTING: JointPositionPlan(),
+                        SystemMode.SAMPLING: JointPositionServo(),
+                    }
+                )
+        return action
 
     def _build_cameras(self) -> Dict[str, Any]:
         from cfgable import import_string  # provided via airdc's cfgable dep
@@ -176,13 +226,10 @@ class AIRBOTPlayRobot(Robot):
         raw = self._sys.capture_observation()
         obs: Dict[str, Any] = {}
 
-        arm = raw["arm/joint_state/position"]["data"]
-        for name, value in zip(self.config.arm_joint_names, arm):
-            obs[f"{name}.pos"] = float(value)
-
-        if self._has_eef:
-            eef = raw["eef/joint_state/position"]["data"]
-            obs[f"{self.config.gripper_joint_name}.pos"] = float(eef[0])
+        if self.config.control_mode == "pose":
+            self._read_pose_state(raw, obs)
+        else:
+            self._read_joint_state(raw, obs)
 
         for key, cam in self._cameras.items():
             frame = cam.capture_observation()
@@ -190,21 +237,64 @@ class AIRBOTPlayRobot(Robot):
 
         return obs
 
+    def _read_joint_state(self, raw: Dict[str, Any], obs: Dict[str, Any]) -> None:
+        arm = raw["arm/joint_state/position"]["data"]
+        for name, value in zip(self.config.arm_joint_names, arm):
+            obs[f"{name}.pos"] = float(value)
+        if self._has_eef:
+            eef = raw["eef/joint_state/position"]["data"]
+            obs[f"{self.config.gripper_joint_name}.pos"] = float(eef[0])
+
+    def _read_pose_state(self, raw: Dict[str, Any], obs: Dict[str, Any]) -> None:
+        # airdc labels the arm EEF cartesian pose under eef/pose/* (see
+        # airbot_ie/robots/airbot_play.py). position xyz (3) + orientation
+        # quaternion xyzw (4); the gripper is the eef joint position (1).
+        pos = raw["eef/pose/position"]["data"]
+        ori = raw["eef/pose/orientation"]["data"]
+        for name, value in zip(self.config.position_keys, pos):
+            obs[name] = float(value)
+        for name, value in zip(self.config.orientation_keys, ori):
+            obs[name] = float(value)
+        if self._has_eef:
+            grip = raw["eef/joint_state/position"]["data"]
+            obs[f"{self.config.gripper_joint_name}.pos"] = float(grip[0])
+
     def send_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
         if not self.is_connected:
             raise ConnectionError(f"{self} is not connected.")
 
-        arm = [float(action[f"{name}.pos"]) for name in self.config.arm_joint_names]
         stamp = time_ns()
+        if self.config.control_mode == "pose":
+            airdc_action = self._pose_airdc_action(action, stamp)
+        else:
+            airdc_action = self._joint_airdc_action(action, stamp)
+
+        self._sys.send_action(airdc_action)
+        return action
+
+    def _joint_airdc_action(self, action: Dict[str, Any], stamp: int) -> Dict[str, Any]:
+        arm = [float(action[f"{name}.pos"]) for name in self.config.arm_joint_names]
         airdc_action: Dict[str, Any] = {
             "arm/joint_state/position": {"data": arm, "t": stamp},
         }
         if self._has_eef:
             grip = float(action[f"{self.config.gripper_joint_name}.pos"])
             airdc_action["eef/joint_state/position"] = {"data": [grip], "t": stamp}
+        return airdc_action
 
-        self._sys.send_action(airdc_action)
-        return action
+    def _pose_airdc_action(self, action: Dict[str, Any], stamp: int) -> Dict[str, Any]:
+        # eef/pose/* is routed to the arm's servo_cart_pose by the airdc System;
+        # the gripper stays a separate eef joint command.
+        position = [float(action[k]) for k in self.config.position_keys]
+        orientation = [float(action[k]) for k in self.config.orientation_keys]
+        airdc_action: Dict[str, Any] = {
+            "eef/pose/position": {"data": position, "t": stamp},
+            "eef/pose/orientation": {"data": orientation, "t": stamp},
+        }
+        if self._has_eef:
+            grip = float(action[f"{self.config.gripper_joint_name}.pos"])
+            airdc_action["eef/joint_state/position"] = {"data": [grip], "t": stamp}
+        return airdc_action
 
     # ------------------------------------------------------------------ #
     # Homing

@@ -79,16 +79,47 @@ class AIRBOTPlayRobotConfig(RobotConfig):
     components: List[str] = field(default_factory=lambda: ["arm", "eef"])
     """airdc components to control. Currently ``arm`` and optional ``eef``."""
 
+    # --- control space ---
+    control_mode: str = "joint"
+    """Control space for observation.state / action. Must match how the checkpoint
+    was trained (``mcap.states`` / ``mcap.actions``):
+
+    * ``"joint"`` (default): the 6 arm joints (+ gripper if ``eef`` in
+      ``components``) as ``"<joint>.pos"`` — observation.state/action dim 6 or 7.
+    * ``"pose"``: the arm EEF cartesian pose (position xyz[3] + orientation
+      quaternion xyzw[4]) + gripper joint (1 if ``eef``) — dim 7 or 8, in the
+      order [position, orientation, gripper]. The pose is read via the airdc
+      System's ``eef/pose/*`` observation and commanded via ``servo_cart_pose``
+      (SERVO_CART_POSE); the gripper stays a joint command. Homing/``initial_pose``
+      remain joint-space regardless of this setting.
+
+    Default ``"joint"`` keeps the previous behavior (and the base-model mock
+    smoke test) working unchanged."""
+
     # --- LeRobot-facing feature naming ---
     arm_joint_names: List[str] = field(
         default_factory=lambda: [f"joint_{i}" for i in range(1, 7)]
     )
     """LeRobot names for the 6 arm joints (order matters: maps to airdc arm
-    ``joint_state/position`` in order)."""
+    ``joint_state/position`` in order). Used only in ``control_mode="joint"``."""
 
     gripper_joint_name: str = "gripper"
     """LeRobot name for the single eef/gripper DoF. Ignored if ``eef`` is not in
-    ``components``."""
+    ``components``. Used in both control modes (the gripper is always a joint)."""
+
+    # --- pose feature naming (control_mode="pose") ---
+    position_keys: List[str] = field(
+        default_factory=lambda: ["eef.x", "eef.y", "eef.z"]
+    )
+    """LeRobot feature names for the EEF position xyz (3). Order maps to the airdc
+    ``eef/pose/position`` vector in order. Used only in ``control_mode="pose"``."""
+
+    orientation_keys: List[str] = field(
+        default_factory=lambda: ["eef.qx", "eef.qy", "eef.qz", "eef.qw"]
+    )
+    """LeRobot feature names for the EEF orientation quaternion, xyzw (4). Order
+    maps to the airdc ``eef/pose/orientation`` vector (xyzw, as returned by
+    ``get_end_pose``). Used only in ``control_mode="pose"``."""
 
     # --- cameras (reused airdc devices) ---
     cameras: Dict[str, AirdcCameraSpec] = field(default_factory=dict)
