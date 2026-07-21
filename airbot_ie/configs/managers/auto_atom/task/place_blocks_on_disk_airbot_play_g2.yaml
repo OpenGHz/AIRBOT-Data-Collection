@@ -10,3 +10,5 @@ defaults:
 
 sample_limit:
   size: 600
+
+sample_every: 1
