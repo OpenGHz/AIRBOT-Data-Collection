@@ -1,4 +1,6 @@
+import os
 import time
+from pathlib import Path
 from logging import getLogger
 from importlib.metadata import version
 from collections import deque, defaultdict
@@ -10,7 +12,7 @@ from airdc.state_machine.fsm import (
     DemonstrateFSMConfig,
     DemonstrateState,
 )
-from airdc.basis import PACKAGE_NAME
+from airdc.basis import PACKAGE_NAME, Bcolors
 from mcap_data_loader.configurers.basis import main_argparse
 from typing import Optional
 
@@ -78,6 +80,17 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
         manager.set_fsms(fsms)
         if not manager.configure():
             raise RuntimeError(f"Failed to configure manager: {name}.")
+    # Announce once, after initialization completes and before the first
+    # collection tick, where episodes will be written. With batching each FSM
+    # gets its own suffixed directory, so report their common parent as the
+    # save root; a single FSM reports its own directory.
+    save_dirs = sorted({fsm.dataset_config.absolute_directory for fsm in fsms})
+    save_root = (
+        save_dirs[0]
+        if len(save_dirs) == 1
+        else Path(os.path.commonpath([str(p) for p in save_dirs]))
+    )
+    logger.info(Bcolors.green(f"Data will be saved under: {save_root}"))
     interval = 1.0 / config.update_rate if config.update_rate > 0 else 0.0
     logger.info(f"Update rate: {config.update_rate} Hz")
     manager_update_every = dict(config.manager_update_every)
