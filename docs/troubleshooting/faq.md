@@ -62,6 +62,10 @@ python3 scripts/process_analysis.py airdc
 - 遥操作跟随控制进程（如果启用）
 - 相机进程（如果启用并发；每个相机独占一个）
 
+## 启动配置失败
+
+首次配置失败（相机未找到、CAN 未连接、相机端口变化等）时，默认会自动结束并退出程序（`exit_on_configure_failure=true`）。若希望修复后原地重试而不退出，可设置 `managers.self_manager.exit_on_configure_failure=false`：此时程序停留在 `unconfigured` 状态，修复设备 / 配置后按 `c` 键重试配置，或按 `Ctrl+C` 退出。详见[常见配置调整](../configure/common.md)的「配置失败处理」一节。
+
 ## 启动卡死
 
 默认启用`OpenCV`的可视化功能，其与默认的键盘控制库`pynput`可能存在冲突，导致图像显示卡死无法正常显示图像窗口，解决方法是优先导入并调用可视化，抢占控制权。为此可在配置文件中默认额外增加一个`prepare_cv2`字段，参考`airbot_ie/configs/basis.yaml`（默认已注释）。

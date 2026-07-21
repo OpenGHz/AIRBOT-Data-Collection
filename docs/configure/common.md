@@ -14,10 +14,26 @@
 
 支持配置在数据采集状态变化时自动执行指定动作，例如在每次开始采集前自动将机器人重置到初始位姿等，可参考`configs/demonstrators/test.yaml`中的`send_actions`字段进行配置（注意不要直接在`test.yaml`中修改）。
 
+## 配置失败处理
+
+首次配置失败（例如相机未找到、CAN 未连接、相机端口变化等）时的行为由 self manager 的 `exit_on_configure_failure` 字段控制（默认 `true`）：
+
+- `true`（默认）：配置失败后自动触发 `finish` 结束并退出程序。
+- `false`：停留在 `unconfigured` 状态，不退出。此时可在修复设备 / 配置后按 `c` 键重试配置（`configure` 动作），或按 `Ctrl+C` 退出。
+
+命令行覆盖示例（键盘管理器下 self manager 位于 `managers.self_manager`）：
+
+```bash
+airdc managers.self_manager.exit_on_configure_failure=false
+```
+
 ## 相机功能
 
 ### 深度数据
 默认情况下深度相机不采集深度数据（体积较大），如果需要采集，可参考`configs/demonstrators/realsense.yaml`中的参数，在相应相机配置字段下添加`enable_depth`和`align_depth`字段并设置为`true`。点云数据不支持也不建议直接采集，请自行结合相机参数信息从深度图像中生成。
+
+### 模态开关（`enable_*`）
+相机支持 `enable_color`、`enable_depth`、`enable_mask`、`enable_heat_map` 等字段控制采集哪些图像模态（要求 `enable_color`、`enable_depth` 至少一个为 `true`）。除了在单个相机配置下写死，也可以在配置顶层定义这些键，并在各相机配置下用插值引用（如 `enable_depth: ${enable_depth}`），从而用一个顶层开关统一控制所有相机。AAO 仿真采集即采用该方式，详见 [AAO 仿真数据采集](../workflows/aao.md) 的「采集模态」一节。
 
 ### 非阻塞取图
 相机支持非阻塞取图模式，可在相机配置中增加`blocking`字段并设置为`false`，这样可以避免因相机帧率不足影响整体数据采集频率，不过会导致相机数据中出现重复帧（目前暂不支持相机端异步不等长采集，但可通过配置视频编码器端的采集策略实现最终不等长的数据存储，见[视频编码参数](#视频编码参数)）。

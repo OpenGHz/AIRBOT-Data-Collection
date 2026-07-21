@@ -74,8 +74,25 @@ batch_size: 4
 ```yaml
 defaults:
   - aao_config
-  - key_remap: aao_to_real  # ← 唯一区别
+  - key_remap: aao_to_real  # ← 核心区别
 ```
+
+### 采集模态（`enable_*`）
+
+`aao_config_real.yaml` 顶层设置了一组采集模态开关，经 OmegaConf 插值（`${enable_color}` 等）下发到各相机配置，统一控制仿真渲染并采集哪些图像模态：
+
+```yaml
+enable_color: true      # RGB 彩色图（默认开启）
+enable_depth: false     # 深度图
+enable_mask: false      # 分割掩码
+enable_heat_map: false  # 热力图
+
+batch_size: 1           # 文件内默认并行度（并行环境数），命令行可覆盖
+```
+
+- 顶层定义一次即可应用到所有相机组件（相机配置下写 `enable_color: ${enable_color}` 等引用，参考 `airbot_ie/configs/test/open_the_door.yaml`）；需要单独控制某个相机时，在该相机配置下写死对应字段即可。
+- 相机配置要求 `enable_color` 与 `enable_depth` 至少一个为 `true`（见 `airdc/common/devices/cameras/utils.py`）。
+- 默认只采集彩色图；如需深度 / 掩码 / 热力图，把对应键改为 `true`，或用命令行覆盖（如 `enable_depth=true`）。
 
 ## 任务配置
 
