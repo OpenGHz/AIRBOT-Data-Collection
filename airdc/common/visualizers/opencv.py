@@ -94,6 +94,15 @@ class OpenCVVisualizer(VisualizerBasis):
 
     config: OpenCVVisualizerConfig
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize attributes that shutdown() depends on
+        self._concurrent: SpawnProcess = None
+        self._smm: SharedMemoryManager = None
+        self._stop_event = None
+        self._is_concurrent = False
+        self.current_key = None
+
     def on_configure(self) -> bool:
         if not self.config.ignore_info:
             self.text_config = TextConfig()
@@ -101,11 +110,9 @@ class OpenCVVisualizer(VisualizerBasis):
                 np.ones((self.config.height, self.config.width, 3), dtype=np.uint8)
                 * 255
             )
-        self._concurrent: SpawnProcess = None
         spawn_ctx = get_context("spawn")
-        self._smm: SharedMemoryManager = SharedMemoryManager(ctx=spawn_ctx)
+        self._smm = SharedMemoryManager(ctx=spawn_ctx)
         self._stop_event = spawn_ctx.Event()
-        self.current_key = None
         self._is_concurrent = self.config.concurrent_mode != ConcurrentMode.none
         return True
 
@@ -194,12 +201,13 @@ class OpenCVVisualizer(VisualizerBasis):
         self._images[key][:] = value
 
     def shutdown(self):
-        if self._concurrent:
+        if self._concurrent is not None:
             self._stop_event.set()
             if self._concurrent.is_alive():
                 self._concurrent.join(5)
+        if self._smm is not None:
             self._smm.shutdown()
-        else:
+        if not self._is_concurrent:
             cv2.destroyAllWindows()
 
     def _put_info(self, image: np.ndarray, info: SampleInfo) -> None:
