@@ -138,6 +138,9 @@ airbot_py = { path = "airbot_ie/deps/airbot_py-5.1.6-py3-none-any.whl" }
 #     SDK it imports comes from the separate `airbotpy` feature above.
 #   - airdc[v4l2] adds camera I/O (linuxpy/PyTurboJPEG) to the inference envs.
 # ---------------------------------------------------------------------------
+[feature.airbot.dependencies]
+libjpeg-turbo = "*"       # libturbojpeg.so 3.0+ for PyTurboJPEG (v4l2 cameras)
+
 [feature.airbot.pypi-dependencies]
 lerobot_robot_airbot_play = { path = "airbot_ie/lerobot_plugin/lerobot_robot_airbot_play", editable = true }
 airdc = { path = ".", extras = ["v4l2"], editable = true }

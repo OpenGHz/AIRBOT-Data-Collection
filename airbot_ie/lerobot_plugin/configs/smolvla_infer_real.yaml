@@ -28,30 +28,22 @@ preserve_keys: [cameras]
 robot:
   type: airbot_play
   url: localhost            # arm gRPC server host
-  port: 50050
+  port: 50051
   components: [arm]         # match training state dim: [arm]=6, [arm, eef]=7
   cameras:
-    # USB / V4L2 camera. Key must match the training image feature name.
-    camera1:
+    "observation.images.env_camera":
       target: airdc.common.devices.cameras.v4l2.V4L2Camera
       width: 640
       height: 480
       fps: 30
-      extra: { camera_index: 0 }
-    # Add more cameras to match your trained feature set, e.g.:
-    # camera2:
-    #   target: airdc.common.devices.cameras.v4l2.V4L2Camera
-    #   width: 640
-    #   height: 480
-    #   fps: 30
-    #   extra: { camera_index: 2 }
-    # RealSense alternative (color stream):
-    # wrist:
-    #   target: airdc.common.devices.cameras.intelrealsense.IntelRealSense
-    #   width: 640
-    #   height: 480
-    #   fps: 30
-    #   extra: { camera_index: "<serial_number>", enable_depth: false }
+      extra: { camera_index: usb-0000:00:14.0-1.4 }
+    # Add the other camera(s) your checkpoint expects, e.g.:
+    "observation.images.follow_camera":
+      target: airdc.common.devices.cameras.v4l2.V4L2Camera
+      width: 640
+      height: 480
+      fps: 30
+      extra: { camera_index: usb-0000:00:14.0-2 }
 
 policy:
   path: outputs/train/my_smolvla/checkpoints/last/pretrained_model
