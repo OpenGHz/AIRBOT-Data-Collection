@@ -1,0 +1,41 @@
+# @package _global_
+
+# Rename the auto-atomic-operation (sim) recorded topic names to the REAL-robot
+# training convention, so a sim-collected MCAP feeds the existing training
+# configs (pi05_train.yaml / smolvla_train.yaml) UNCHANGED. Applied per-key at
+# record time by the mcap sampler (`key_remap`).
+#
+# Sim (structured=false, operator "arm", cameras eef_wrist_cam + env1_cam):
+#   arm/pose/{position,orientation}          measured EEF pose  (state)
+#   action/arm/pose/{position,orientation}   target EEF pose    (action)
+#   env1_cam/color/image_raw                 external camera
+#   eef_wrist_cam/color/image_raw            wrist camera
+#
+# Real-robot training topics (pi05_train.yaml / smolvla_train.yaml):
+#   /follow/eef/pose/{position,orientation}  observation.state
+#   /lead/eef/pose/{position,orientation}    action
+#   /env_camera/color/image_raw              observation.images (env)
+#   /follow_camera/color/image_raw           observation.images (wrist)
+#
+# Rule order matters: rename `action/arm/pose` -> `lead/eef/pose` BEFORE
+# `arm/pose` -> `follow/eef/pose`, otherwise the action keys would also match the
+# state rule. Cameras are renamed first (independent substrings).
+remap_module: mcap_data_loader.utils.key
+remap_func:
+  _target_: toolz.compose_left
+  _args_:
+    # cameras: env1_cam -> env_camera, eef_wrist_cam -> follow_camera
+    - _target_: ${remap_module}.replace
+      olds: [env1_cam, eef_wrist_cam]
+      news: [env_camera, follow_camera]
+    # action target pose: action/arm/pose -> lead/eef/pose  (must precede next)
+    - _target_: ${remap_module}.replace
+      olds: action/arm/pose
+      news: lead/eef/pose
+    # measured state pose: arm/pose -> follow/eef/pose
+    - _target_: ${remap_module}.replace
+      olds: arm/pose
+      news: follow/eef/pose
+    # leading slash to match the /follow /lead /env_camera convention
+    - _target_: ${remap_module}.add_prefix_suffix
+      prefix: /

@@ -54,7 +54,7 @@ airdc = { path = ".", extras = ["assis"], editable = true }
 # Editable during development so fixes to mcap_lerobot (train/infer) take effect
 # without reinstall. Provides the mcap-data-loader that airdc (>=0.3.1) requires;
 # base deps are light (no torch/lerobot — those are imported lazily).
-# mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
+mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
 redis = "*"
 PyNvVideoCodec = "*"
 
@@ -271,18 +271,40 @@ libjpeg-turbo = "*"       # libturbojpeg.so for PyTurboJPEG (apt equivalent: lib
 airdc = { path = ".", extras = ["all", "airbot"], editable = true }
 
 # ---------------------------------------------------------------------------
-# aao feature: auto-atomic-operation — the MuJoCo (physics) + Gaussian-splatting
-# (gs) simulation stack. Kept OUT of the default environment (it pulls heavy
-# sim/render deps like mujoco + gsplat) and composed only where auto-atom is
-# actually needed: the `ros` env and the `infer-aao` env.
+# aao-core feature: the auto-atomic-operation simulator with the MuJoCo backend
+# ONLY (native rendering). No LeRobot dependency, so it composes into both the
+# data-collection env (collect-aao, airdc[all,airbot] -> opencv-python) and the
+# inference env (infer-aao, lerobot -> opencv-python-headless) without an opencv
+# clash. The `gs` (Gaussian-splatting) extra is intentionally NOT included here —
+# it pulls gsplat + torch + a git dependency and is only needed by GS scenes
+# (`*_gs` task configs). Native tasks use
+# `mujoco_env.BatchedUnifiedMujocoEnv`, which never imports gsplat. For GS scenes
+# add the `aao-gs` feature to the environment.
 # ---------------------------------------------------------------------------
-[feature.aao.pypi-dependencies]
+[feature.aao-core.pypi-dependencies]
+auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
+    "mujoco",
+], editable = true }
+
+# ---------------------------------------------------------------------------
+# aao-gs feature (delta over aao-core): the Gaussian-splatting render extra
+# (gsplat + torch + gaussian_renderer). Compose into an environment only when
+# collecting/running a GS scene (`*_gs` aao task configs). Kept separate so the
+# common native-MuJoCo envs stay light.
+# ---------------------------------------------------------------------------
+[feature.aao-gs.pypi-dependencies]
 auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
     "mujoco",
     "gs",
 ], editable = true }
-# LeRobot Robot plugin to run a policy in the aao MuJoCo sim (state-only, EEF
-# pose). Editable so `--robot.type=aao_sim` is discoverable in infer-aao.
+
+# ---------------------------------------------------------------------------
+# aao feature (delta over aao-core): adds the LeRobot Robot plugin so a trained
+# policy can be run in the aao sim (`--robot.type=aao_sim`). Composed only into
+# the inference env (infer-aao); NOT into collection (which has no lerobot).
+# ---------------------------------------------------------------------------
+[feature.aao.pypi-dependencies]
+# Editable so `--robot.type=aao_sim` is discoverable.
 lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim", editable = true }
 
 # ---------------------------------------------------------------------------
@@ -291,8 +313,13 @@ lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim
 #   - default:       base (non-ROS) deps only.
 #   - collect:       data-collection stack (airdc[all,airbot] + libturbojpeg +
 #                    airbot_py SDK via the `airbotpy` feature); the pixi
-#                    replacement for `bash install/install.sh`.
-#   - ros:           base + ROS stack + aao (for ROS samplers / ROS workflows).
+#                    replacement for `bash install/install.sh` (real-robot).
+#   - collect-aao:   SIM data collection = collect + the auto-atom simulator
+#                    (aao-core, native MuJoCo, no lerobot). For
+#                    `airdc --name aao_config_real`.
+#   - collect-aao-gs: collect-aao for Gaussian-splatting scenes (`*_gs` tasks);
+#                    adds gsplat+torch via aao-gs.
+#   - ros:           base + ROS stack + aao-core (for ROS samplers / ROS workflows).
 #   - infer-airbot:  mlbase + AIRBOT Play robot stack (run a LeRobot policy on the
 #                    real arm).
 #   - infer-aao:     mlbase + aao stack (auto-atom MuJoCo/gs) — run a LeRobot
@@ -307,13 +334,22 @@ lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim
 # `airbotpy` gives the data-collection env the airbot_py arm SDK (grpc backend)
 # without the lerobot plugin (which lives in the `airbot` feature).
 collect = ["collect", "airbotpy"]
-ros = ["ros", "aao"]
+# collect-aao: SIM data collection (airdc collection stack + the auto-atom
+# simulator). Uses `aao-core` (sim only, no lerobot) so airdc[all,airbot]'s
+# opencv-python does not clash with lerobot's opencv-python-headless. This is the
+# env for `airdc --name aao_config_real ...` — NOT infer-aao (which pulls lerobot).
+collect-aao = ["collect", "aao-core"]
+# collect-aao-gs: same as collect-aao but for Gaussian-splatting scenes (`*_gs`
+# task configs) — adds `aao-gs` (gsplat + torch + gaussian_renderer) on top.
+collect-aao-gs = ["collect", "aao-gs"]
+# `aao-core` = the auto-atom simulator; `aao` adds the aao_sim lerobot plugin.
+ros = ["ros", "aao-core"]
 # `ledata` carries the lerobot dataset stack (datasets/pandas/av/...), which
 # `lerobot.rollout` (= what mcap-lerobot-infer runs) requires at import — not
 # just training. So every inference env needs it too.
 # `airbotpy` provides the airbot_py SDK; `airbot` adds the lerobot plugin on top.
 infer-airbot = ["mlbase", "ledata", "airbotpy", "airbot"]
-infer-aao = ["mlbase", "ledata", "aao"]
+infer-aao = ["mlbase", "ledata", "aao-core", "aao"]
 pi05 = ["mlbase", "ledata", "pi05"]
 pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05"]
 smolvla = ["mlbase", "ledata", "smolvla"]

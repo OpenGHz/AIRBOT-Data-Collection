@@ -12,6 +12,10 @@ env:
   HF_ENDPOINT: "https://hf-mirror.com"
   HF_HUB_DISABLE_XET: "1"
 
+# Keep `sim_cameras` as one whole mapping when the yaml is flattened to CLI args
+# (otherwise the nested dict is split into args draccus rejects).
+preserve_keys: [sim_cameras]
+
 robot:
   type: aao_sim
   task_config: open_door_airbot_play_g2p   # complete aao task (scene + robot + IK)

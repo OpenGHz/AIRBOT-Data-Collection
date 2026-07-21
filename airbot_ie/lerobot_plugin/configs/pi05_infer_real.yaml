@@ -22,6 +22,11 @@ env:
   HF_ENDPOINT: "https://hf-mirror.com"
   HF_HUB_DISABLE_XET: "1"
 
+# Keep `cameras` as one whole mapping when the yaml is flattened to CLI args
+# (robot.cameras is a Dict[str, CameraSpec]; without this it is split into
+# args draccus rejects).
+preserve_keys: [cameras]
+
 robot:
   type: airbot_play
   url: localhost            # arm gRPC server host

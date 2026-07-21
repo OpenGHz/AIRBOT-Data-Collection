@@ -1,0 +1,14 @@
+# @package _global_
+
+# Manager task config for the place_blocks_on_disk_airbot_play_g2 aao scene.
+# The task name must exist BOTH here (manager task group) and in aao_configs/
+# (the sim env config, already present) — passing
+# `managers/auto_atom/task=place_blocks_on_disk_airbot_play_g2` selects both.
+defaults:
+  - mixin
+  - _self_
+
+sample_limit:
+  size: 600
+
+batch_size: 1

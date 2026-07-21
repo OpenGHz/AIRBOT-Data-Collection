@@ -19,6 +19,11 @@
 #
 # For a *trained* checkpoint, point policy.path at your output dir and match the
 # camera keys / components to whatever it was trained on.
+# Keep `cameras` as one whole mapping when the yaml is flattened to CLI args
+# (robot.cameras is a Dict[str, CameraSpec]; without this it is split into
+# args draccus rejects).
+preserve_keys: [cameras]
+
 robot:
   type: airbot_play
   mock: true

@@ -1,0 +1,58 @@
+# Run a trained policy on the place_blocks_on_disk task in the auto-atomic-operation
+# (aao) MuJoCo SIM, via `mcap-lerobot-infer` (routes to lerobot-rollout). No hardware.
+#
+#   pixi run -e infer-aao mcap-lerobot-infer \
+#     -c airbot_ie/lerobot_plugin/configs/place_blocks_aao_infer.yaml
+#
+# Feature keys are aligned with the sim data collected via `aao_config_real`
+# (key_remap/aao_to_real.yaml) and the real-robot training configs
+# (pi05_train.yaml / smolvla_train.yaml), so the SAME checkpoint runs in sim and
+# on the real arm:
+#   observation.state              = follow EEF pose  (position 3 + quat 4 = 7)
+#   observation.images.env_camera  = env1_cam       (aao)  -> /env_camera
+#   observation.images.follow_camera = eef_wrist_cam (aao) -> /follow_camera
+#   action                         = EEF pose target (7)
+#
+# The robot's position_keys/orientation_keys are NOT prefixed with a camera; they
+# are the scalar components lerobot aggregates into observation.state. The
+# sim_cameras map the LeRobot image feature key -> the aao camera NAME (the sim's
+# real camera name, before the record-time key_remap that only applies to
+# collection). camera_shape must match the task's cam_width/cam_height (640x480).
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+# Keep `sim_cameras` as ONE whole mapping when the yaml is flattened to CLI args
+# (otherwise a nested dict like `robot.sim_cameras.observation.images.env_camera`
+# is split into args draccus rejects). `sim_cameras` is already a built-in
+# preserve key, but declaring it here documents the mechanism and is future-proof
+# — add any other structured key you introduce to this list.
+preserve_keys: [sim_cameras]
+
+robot:
+  type: aao_sim
+  task_config: place_blocks_on_disk_airbot_play_g2   # the aao scene + robot + IK
+  operator: arm
+  kinematic: false
+  substeps: 1
+  has_gripper: true
+  # observation.state / action = EEF pose (position xyz + quaternion xyzw) + gripper.
+  # These aggregate (by lerobot) into the 7/8-dim state the checkpoint expects.
+  position_keys: [eef.x, eef.y, eef.z]
+  orientation_keys: [eef.qx, eef.qy, eef.qz, eef.qw]
+  gripper_key: gripper.pos
+  # LeRobot image feature key -> aao camera name. Keys match the training feature
+  # names (observation.images.env_camera / .follow_camera); values are the sim's
+  # actual camera names in the place_blocks task config.
+  sim_cameras:
+    observation.images.env_camera: env1_cam
+    observation.images.follow_camera: eef_wrist_cam
+  camera_shape: [480, 640, 3]     # place_blocks: cam_height=480, cam_width=640
+  mujoco_gl: glfw                 # has a display; headless: egl / osmesa
+
+policy:
+  path: outputs/train/my_run/checkpoints/last/pretrained_model
+
+task: "place the blocks on the disk"   # same instruction used during data collection
+fps: 30
+duration: 0                            # 0 = run until interrupted

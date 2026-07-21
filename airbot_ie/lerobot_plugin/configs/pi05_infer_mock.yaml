@@ -8,6 +8,11 @@
 # `cameras` is preserved as a whole mapping by the yaml->CLI flattener, so the
 # two synthetic MockCamera specs are decoded straight into the airbot_play
 # robot config. Their keys are exactly the policy's image features.
+# Keep `cameras` as one whole mapping when the yaml is flattened to CLI args
+# (robot.cameras is a Dict[str, CameraSpec]; without this it is split into
+# args draccus rejects).
+preserve_keys: [cameras]
+
 robot:
   type: airbot_play
   mock: true

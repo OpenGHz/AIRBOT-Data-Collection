@@ -1,0 +1,34 @@
+defaults:
+  - basis
+  - managers: auto_atom/basis
+  - demonstrators: auto_atom/basis
+  - samplers: mcap
+  - key_remap: aao_to_real
+  - _self_
+  - override hydra/job_logging: custom
+  - override hydra/launcher: joblib
+
+# Same as aao_config.yaml, but renames the recorded sim topic names to the
+# REAL-robot training convention (see key_remap/aao_to_real.yaml), so the
+# collected MCAP feeds pi05_train.yaml / smolvla_train.yaml UNCHANGED:
+#   /follow/eef/pose/{position,orientation}   (observation.state)
+#   /lead/eef/pose/{position,orientation}     (action)
+#   /env_camera/color/image_raw               (env camera)
+#   /follow_camera/color/image_raw            (wrist camera)
+#
+# Run, e.g.:
+#   airdc --name aao_config_real dataset.directory=aao_data \
+#     managers/auto_atom/task=place_blocks_on_disk_airbot_play_g2 \
+#     sample_limit.rounds=100 batch_size=2
+
+# disable all visualization
+visualizer: null
+# managers:
+#   auto_atom:
+#     env:
+#       viewer: null
+
+# Apply the sim->real key rename at record time (key_remap/aao_to_real.yaml
+# provides ${remap_func}).
+sampler:
+  key_remap: ${remap_func}
