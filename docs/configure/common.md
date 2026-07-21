@@ -8,6 +8,7 @@
 - `sample_limit.start_round`: 数据采集的起始轮数。如果已经采集有数据，请对应修改，避免覆盖已有数据。默认设置为`-1`，自动根据保存目录下已采集的数据文件数量自动确定起始轮数（不会自动判断文件序号，因此如果文件编号不连续，会导致起始轮数判断错误）。
 - `sample_limit.size`: 采样帧数的上限。一方面，有些算法程序要求采集的数据帧数一致，另一方面，可以避免忘记停止采集而导致采集数据量过大内存溢出。默认设置为1000
 - `sample_every`: 降采样频率（仅在 sampling 状态生效）。设为 `N` 时每 `N` 个 tick 保存一帧数据（默认 `1` = 每帧都保存）。用于减少存储/编码开销，同时保持仿真全分辨率运行（轨迹保真）。与 runner 端的 `demo_stride` 正交（后者减少回放动作数）。`sample_limit.size` 阈值检查已保存帧数，而非总 tick 数。
+- `manager_update_every`: 按 manager 分别设置更新分频（字典，键为 manager 名）。设为 `{manager_name: N}` 时该 manager 每 `N` 个主循环 tick 更新一次；未设置的 manager 每 tick 都更新。用于解耦不同模块的更新频率，例如 `{self_manager: 3}` 可让仿真 (auto_atom) 每 tick 运行，但采样/保存每 3 tick 一次。**注意**：分频计数器是全局的（跨 episode），不在每轮开始时重置，因此某些 episode 的首帧可能被跳过。如需确保每轮首帧都采集，用 `sample_every`（episode-local 计数器）或在 runner 端降采样 (`demo_stride`)。
 
 ## 动作回调
 
