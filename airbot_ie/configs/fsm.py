@@ -56,7 +56,12 @@ STATE_MACHINE_CONFIG = StateMachineConfig(
             ]
         },
         Action.remove: {State.active: [ToDestConfig(dest=None)]},
-        Action.finish: {State.active: [ToDestConfig(dest=State.finalized)]},
+        Action.finish: {
+            State.active: [ToDestConfig(dest=State.finalized)],
+            State.unconfigured: [
+                ToDestConfig(dest=State.finalized)
+            ],  # Allow finish from unconfigured
+        },
         Action.capture: {
             State.active: [ToDestConfig(dest=None)],
             State.sampling: [ToDestConfig(dest=None)],

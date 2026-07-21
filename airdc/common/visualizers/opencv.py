@@ -205,7 +205,9 @@ class OpenCVVisualizer(VisualizerBasis):
             self._stop_event.set()
             if self._concurrent.is_alive():
                 self._concurrent.join(5)
-        if self._smm is not None:
+        if self._smm is not None and hasattr(self._smm, "shutdown"):
+            # SharedMemoryManager.shutdown() only exists after start() is called
+            # It's dynamically added as a Finalize object during start()
             self._smm.shutdown()
         if not self._is_concurrent:
             cv2.destroyAllWindows()

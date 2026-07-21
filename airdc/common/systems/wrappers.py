@@ -134,6 +134,9 @@ class SensorConcurrentWrapper(Sensor):
     def shutdown(self):
         self._rpc.shutdown()
         self._concurrent.join(timeout=5.0)
+        # SharedMemoryManager.shutdown() only exists after start() is called
+        # It's dynamically added as a Finalize object during start()
+        # Since self._smm.start() is always called in on_configure(), we can safely call shutdown()
         self._smm.shutdown()
         if self._concurrent.is_alive():
             self.get_logger().warning("Concurrent process did not terminate in time.")

@@ -58,6 +58,7 @@ class ManagerConfigBasis(BaseModel, frozen=True):
             DemonstrateAction.finish: "Finish the current episode and save all data",
             DemonstrateAction.remove: "Remove the last saved episode",
             DemonstrateAction.capture: "Capture current component observations",
+            DemonstrateAction.configure: "Retry configuration (when in unconfigured state)",
             ManagerAction.INSTRUCTION: "Show this instruction again",
             ManagerAction.MODE: "Switch passive (gravity composation) / resetting mode of the leaders",
             ManagerAction.FOLLOW: "Start / stop following",
@@ -197,6 +198,8 @@ class SelfManagerConfig(BaseModel):
     """
     on_reach_round: Optional[DemonstrateAction] = DemonstrateAction.finish
     """what to do when the maximum episode of samples is reached usually finish or None"""
+    exit_on_configure_failure: bool = True
+    """whether to automatically exit when initial configuration fails"""
 
 
 class SelfManager(DemonstrateManagerBasis):
@@ -245,7 +248,19 @@ class SelfManager(DemonstrateManagerBasis):
                 self.get_logger().info("Activating the demonstrate interface.")
                 return fsm.act(DemonstrateAction.activate)
             else:
-                self.get_logger().info("Failed to configure the demonstrate interface.")
+                self.get_logger().error(
+                    "Failed to configure the demonstrate interface."
+                )
+                if self.config.exit_on_configure_failure:
+                    self.get_logger().info(
+                        "exit_on_configure_failure is enabled. Triggering finish to exit."
+                    )
+                    fsm.act(DemonstrateAction.finish)
+                else:
+                    self.get_logger().info(
+                        "exit_on_configure_failure is disabled. "
+                        "Staying in unconfigured state. Press 'c' to retry configuration or Ctrl+C to exit."
+                    )
                 return False
         elif (
             state not in {State.unconfigured, State.inactive}

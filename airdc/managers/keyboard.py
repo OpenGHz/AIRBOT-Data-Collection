@@ -21,6 +21,7 @@ class KeyboardCallbackConfig(ManagerConfigBasis):
         "g": MAction.MODE,
         "f": MAction.FOLLOW,
         "f2": MAction.LOCK,
+        "c": DAction.configure,  # Allow reconfiguration from unconfigured state
         # additional keys
         keyboard.Key.esc.name: DAction.finish,
         keyboard.Key.enter.name: DAction.save,
