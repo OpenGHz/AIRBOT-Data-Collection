@@ -31,14 +31,14 @@ robot:
   port: 50051
   components: [arm]         # match training state dim: [arm]=6, [arm, eef]=7
   cameras:
-    "observation.images.env_camera":
+    env_camera:
       target: airdc.common.devices.cameras.v4l2.V4L2Camera
       width: 640
       height: 480
       fps: 30
       extra: { camera_index: usb-0000:00:14.0-1.4 }
     # Add the other camera(s) your checkpoint expects, e.g.:
-    "observation.images.follow_camera":
+    follow_camera:
       target: airdc.common.devices.cameras.v4l2.V4L2Camera
       width: 640
       height: 480

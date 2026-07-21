@@ -17,13 +17,13 @@ robot:
   type: airbot_play
   mock: true
   cameras:
-    "observation.images.env_camera":
+    env_camera:
       target: airdc.common.devices.cameras.mock.MockCamera
       width: 640
       height: 480
       fps: 30
       extra: { random: true }
-    "observation.images.follow_camera":
+    follow_camera:
       target: airdc.common.devices.cameras.mock.MockCamera
       width: 640
       height: 480
