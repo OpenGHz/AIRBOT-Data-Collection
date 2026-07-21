@@ -120,10 +120,25 @@ class DemonstrateInterface:
                 partial(self._modules.demonstrator.react, action)
             )
 
+    def _episode_desc(self) -> str:
+        """Progress-bar description for the current episode.
+
+        When a round limit is active (``end_round`` given explicitly or resolved
+        from ``rounds`` in ``__init__``), include the target as
+        ``Episode {cur}/{end_round}`` so the bar shows overall episode progress
+        toward the stop condition (``episode >= end_round``). Without a round
+        limit, fall back to ``Episode {cur}``.
+        """
+        episode = self._sample_info.episode
+        end_round = self._sample_limit.end_round
+        if end_round > 0:
+            return f"Episode {episode}/{end_round}"
+        return f"Episode {episode}"
+
     def activate(self) -> bool:
         self._bar = (
             ProgressBar(
-                f"Episode {self._sample_info.episode}",
+                self._episode_desc(),
                 self._sample_limit.size,
                 leave_mode=-1,
             )
@@ -151,7 +166,7 @@ class DemonstrateInterface:
         self._save_path = self._modules.sampler.compose_path(
             self._config.dataset.absolute_directory, self._sample_info.episode
         )
-        self._bar.reset(desc=f"Episode {self._sample_info.episode}")
+        self._bar.reset(desc=self._episode_desc())
         self._sampling_tick = 0
         return True
 
