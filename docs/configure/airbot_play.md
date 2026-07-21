@@ -28,6 +28,7 @@ python3 airbot_ie/scripts/setup.py --ic <bus_id> --ii <can_id> --rcd <ref_config
 - `--skip-arm`：跳过机械臂配置，用于仅有相机的工位。启用后不会检测/绑定CAN接口，生成的配置中也不包含机械臂实例，仅配置相机。此时相机可选名称为当前模式下所有名称的并集。
 - `--au`：通过网络地址（URL/IP）指定机械臂，跳过CAN检测与绑定，直接根据参考机械臂配置生成臂实例。每条地址格式为`host`或`host:port`（`host`可为URL或IP，如`192.168.1.100`、`localhost:50050`），多条用英文逗号隔开。地址会写入机械臂配置对应的地址字段（`airbot_play`用`url`，`airbot_mmk`用`ip`），未指定端口时沿用参考配置的默认端口。臂的数量（地址条数）需与常规CAN模式一致（非拖动为2或4，拖动为1或2），以便确定相机可选名称与臂的角色。
 - `--use-uuid`：强制通过`sudo dmidecode`获取硬件UUID（会要求输入密码）作为工位标识。默认不添加该参数，改用无需权限的机器标识（`/etc/machine-id`）来区分不同工位并匹配相机命名映射。
+- `--auto-control`：将生成配置中的`demonstrator.auto_control`字段覆盖为`{groups: null, rates: [100], modes: [process]}`。默认不添加该参数，则沿用参考配置中的`auto_control`。
 
 默认情况下，该程序使用无需权限的机器标识（`/etc/machine-id`）区分不同工位，不会为此要求输入密码；仅当添加`--use-uuid`参数时，才会通过`sudo dmidecode`获取硬件UUID并要求输入密码（注意：首次绑定CAN接口时仍会因执行绑定脚本而要求输入密码）。
 而后会自动检测设备所连接的所有相机并通过图形窗口实时显示图像，图像上方标题的格式为：`名称-ID-USB端口信息或序列号`，如果未曾配置过

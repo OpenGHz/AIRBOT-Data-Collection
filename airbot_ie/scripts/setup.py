@@ -92,6 +92,14 @@ def get_machine_id() -> str:
 
 cur_dir = Path(__file__).parent.resolve()
 
+# demonstrator.auto_control block written when --auto-control is set. Kept as a
+# YAML string so the round-trip preserves the exact flow-style formatting.
+AUTO_CONTROL_OVERRIDE = """\
+groups: null
+rates: [100]
+modes: [process]
+"""
+
 
 class SetupConfig(BaseModelWithFieldAliases):
     """Configuration for the setup script of airbot data collection."""
@@ -169,6 +177,13 @@ class SetupConfig(BaseModelWithFieldAliases):
             "Force reading the hardware UUID via `sudo dmidecode` (requires a "
             "password). By default a non-privileged machine id (/etc/machine-id) "
             "is used to key the per-station camera name mapping."
+        ),
+    )
+    auto_control: bool = Field(
+        False,
+        description=(
+            "Override the generated demonstrator.auto_control with "
+            "{groups: null, rates: [100], modes: [process]}."
         ),
     )
 
@@ -587,6 +602,19 @@ while True:
                     components[key].extend(value)
             logger.info(f"Components: {pformat(components)}")
             param_dict["components"] = components
+            if args.auto_control:
+                # Render None as an explicit `null` so the dumped block matches
+                # the documented format; only affects None values in this dump.
+                yaml.representer.add_representer(
+                    type(None),
+                    lambda rep, data: rep.represent_scalar(
+                        "tag:yaml.org,2002:null", "null"
+                    ),
+                )
+                param_dict["auto_control"] = yaml.load(AUTO_CONTROL_OVERRIDE)
+                logger.info(
+                    f"Overriding auto_control: {pformat(dict(param_dict['auto_control']))}"
+                )
             # config["defaults"].append(
             #     {"post_capture@demonstrator": str(can_num)}
             # )
