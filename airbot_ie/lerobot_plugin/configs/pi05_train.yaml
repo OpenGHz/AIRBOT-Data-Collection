@@ -63,19 +63,25 @@ mcap:
   rela_pose: true
   rot6d: false
   # Topics below match the demo dataset in data/mcap (verified by loading it).
-  # observation.state = follow eef pose (position[3] + orientation[4]) -> (7,).
+  # observation.state = follow eef pose (position[3] + orientation[4]) + gripper
+  # (eef/joint_state/position[1]) -> (8,). Concatenated in THIS list order, so the
+  # gripper is the last dim; inference must expose the state in the same order.
   # pi0.5 requires a non-empty state; it is discretized into the language prompt.
   states:
     - /follow/eef/pose/position
     - /follow/eef/pose/orientation
+    - /follow/eef/joint_state/position
   # Images are decoded from the mcap mp4 attachments -> (3, 480, 640) each.
   images:
     - /env_camera/color/image_raw
     - /follow_camera/color/image_raw
-  # action = lead eef pose (position[3] + orientation[4]) -> (7,).
+  # action = lead eef pose (position[3] + orientation[4]) + gripper
+  # (eef/joint_state/position[1]) -> (8,). Same list-order concat as state, so the
+  # gripper is the last dim.
   actions:
     - /lead/eef/pose/position
     - /lead/eef/pose/orientation
+    - /lead/eef/joint_state/position
   # Language task handling (VLA requirement).
   # task_source: "metadata" (default) reads the instruction from an MCAP metadata
   # record; "config" uses the static `task` string below; "none" disables it.
