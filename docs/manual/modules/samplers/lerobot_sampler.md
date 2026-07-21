@@ -14,9 +14,9 @@
 
 而 `lerobot_record.py` 里包含的 teleop/policy 推理、精确 fps 睡眠、episode reset、UI 展示等逻辑不属于 sampler 范畴，应由 AIRDC 的 `Demonstrator + FSM/Managers` 负责。
 
-因此，本 sampler 的目标是“复刻 lerobot-record 的**数据写入**部分”，并且把不可确定的语义（例如 action 对应哪些键）通过配置显式表达。
+因此，本 sampler 的目标是”复刻 lerobot-record 的**数据写入**部分”，并且把不可确定的语义（例如 action 对应哪些键）通过配置显式表达。
 
-注意：本采样器文件在模块顶层直接 `import lerobot`（遵循 airdc/docs/prompts/prepare.md）。如果环境缺少 `lerobot`，会在 import 阶段直接报错；此时请按 prepare.md 的要求用 `pip` 安装依赖。
+注意：本采样器文件在模块顶层直接 `import lerobot`（遵循 `docs/prompts/prepare.md`）。如果环境缺少 `lerobot`，会在 import 阶段直接报错；此时请按 prepare.md 的要求用 `pip` 安装依赖。
 
 ---
 

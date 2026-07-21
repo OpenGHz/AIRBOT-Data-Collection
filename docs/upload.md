@@ -1,183 +1,60 @@
-# 数据采集程序云端上传功能
+# 数据上传（DataLoop）
 
-## 功能概述
+AIRDC 支持在保存 MCAP 文件后自动上传到 DataLoop 云端平台。该功能由 `airbot_ie/samplers/mcap_sampler.py` 中的 `AIRBOTMcapDataSampler` 提供。
 
-在原有的数据采集程序基础上，新增了自动上传MCAP文件到云端的功能。当用户按下 `s` 键保存数据后，程序会自动将保存的MCAP文件上传到DataLoop云端存储。
+## 功能说明
 
-## 主要改动
+当启用上传功能时，每次成功保存 MCAP episode 后，sampler 会自动调用 DataLoop 客户端将文件上传到指定的 project。上传操作在 `save()` 完成后同步执行。
 
-### 1. 配置文件改动
+## 配置方式
 
-**文件：** `airdc/defaults/config_mmk.yaml`
-
-- 将 `task_id` 从字符串 `"120"` 改为整数 `120`
-- 新增 `upload` 配置节：
+在 Hydra 配置文件中（通常是 `airbot_ie/configs/` 下的采集配置），为 sampler 添加 `upload` 配置块：
 
 ```yaml
-sampler:
-  param:
-    task_info:
-      task_id: 120  # 改为int类型，用作DataLoop的project_id
-    upload:
-      enabled: true                    # 是否启用上传功能
-      endpoint: '192.168.215.80'      # DataLoop服务器地址
-      username: 'admin'               # 用户名
-      password: '123456'              # 密码
+samplers:
+  _target_: airbot_ie.samplers.mcap_sampler.AIRBOTMcapDataSampler
+  upload:
+    enable: true
+    endpoint: "https://your-dataloop-endpoint.com"
+    username: "your-username"
+    password: "your-password"
+  task_info:
+    task_id: 12345  # DataLoop project ID
 ```
 
-### 2. 代码改动
+### 配置字段
 
-**文件：** `airdc/airbot/samplers/mcap_sampler.py`
+- `upload.enable` (bool, 默认 `false`) — 是否启用上传。设为 `true` 时在每次 `save()` 后触发上传。
+- `upload.endpoint` (str) — DataLoop 服务端点 URL。
+- `upload.username` (str) — DataLoop 用户名。
+- `upload.password` (str) — DataLoop 密码。
+- `task_info.task_id` (int/str) — DataLoop project ID，上传目标项目的标识符。
 
-#### 主要修改：
+## 运行时行为
 
-1. **导入新模块**：
-   ```python
-   from typing import Literal, Dict, Union
-   import uuid
-   ```
+1. **配置阶段** (`on_configure()`)：如果 `upload.enable=true`，sampler 会实例化 `DataLoopClient` 并验证连接。如果 `dataloop` 包不可用，启动时会报错。
+2. **保存阶段** (`save()`)：MCAP 文件写入本地后，立即调用 `dataloop_client.samples.upload_sample()` 上传。
+3. **日志输出**：上传前会打印 `Will upload to task id: <id>`；上传成功后打印 `Uploaded to cloud: <message>`。
 
-2. **修改TaskInfo模型**：
-   ```python
-   class TaskInfo(BaseModel):
-       task_id: Union[str, int] = ""  # 支持字符串和整数
-   ```
+## 依赖安装
 
-3. **新增UploadConfig模型**：
-   ```python
-   class UploadConfig(BaseModel):
-       enabled: bool = True
-       endpoint: str = '192.168.215.80'
-       username: str = 'admin'
-       password: str = '123456'
-   ```
+上传功能依赖 `dataloop` Python 包（私有包，需联系 AIRBOT 售后获取安装包或访问凭证）。如果环境中缺少该包，启动时会打印警告：
 
-4. **修改AIRBOTMcapDataSamplerConfig**：
-   ```python
-   class AIRBOTMcapDataSamplerConfig(BaseModel):
-       upload: UploadConfig = UploadConfig()
-   ```
-
-5. **修改save方法**，在保存完成后调用上传：
-   ```python
-   def save(self, path: str) -> str:
-       # ... 原有保存逻辑 ...
-
-       # Upload to cloud after saving
-       if self.config.upload.enabled:
-           self._upload_to_cloud(path)
-
-       return path
-   ```
-
-6. **新增_upload_to_cloud方法**：
-   ```python
-   def _upload_to_cloud(self, file_path: str) -> bool:
-       """Upload the saved file to cloud storage."""
-       try:
-           from dataloop import DataLoopClient
-
-           # Initialize DataLoop client
-           dataloop = DataLoopClient(
-               endpoint=self.config.upload.endpoint,
-               username=self.config.upload.username,
-               password=self.config.upload.password
-           )
-
-           # Generate unique sample ID
-           uid = str(uuid.uuid4())
-
-           # Convert task_id to int if it's a string
-           project_id = self.config.task_info.task_id
-           if isinstance(project_id, str):
-               project_id = int(project_id)
-
-           # Upload the file
-           self.get_logger().info(f"开始上传文件到云端: {file_path}")
-           message = dataloop.samples.upload_sample(
-               project_id=project_id,
-               sample_id=uid,
-               sample_type="Sequential",
-               file_path=file_path
-           )
-
-           self.get_logger().info(f"文件上传成功: {message}")
-           return True
-
-       except ImportError:
-           self.get_logger().error("dataloop 模块未安装，无法上传到云端")
-           return False
-       except Exception as e:
-           self.get_logger().error(f"上传到云端失败: {str(e)}")
-           return False
-   ```
-
-## 使用方法
-
-### 1. 安装依赖
-
-确保安装了DataLoop客户端：
-```bash
-pip install dataloop
+```
+It is detected that the `UPLOAD` package is not installed, and the cloud upload function will not be available.
 ```
 
-### 2. 配置参数
-
-修改 `config_mmk.yaml` 中的上传配置：
-- `task_id`: 设置为对应的DataLoop项目ID（整数）
-- `upload.enabled`: 设置为 `true` 启用上传功能
-- `upload.endpoint`: DataLoop服务器地址
-- `upload.username`: 用户名
-- `upload.password`: 密码
-
-### 3. 运行程序
-
-```bash
-cd airdc
-bash run_mmk.sh
-```
-
-### 4. 数据采集和上传
-
-1. 程序启动后，按 `空格键` 开始采集数据
-2. 按 `s键` 保存数据到本地MCAP文件
-3. 程序会自动上传文件到云端
-4. 查看日志确认上传状态
-
-## 工作流程
-
-1. **数据采集**：按空格键开始采集数据
-2. **本地保存**：按s键保存数据到本地MCAP文件
-3. **自动上传**：保存完成后自动上传到DataLoop云端
-4. **继续采集**：上传完成后可以继续下一轮数据采集
-
-## 日志信息
-
-- 开始上传：`开始上传文件到云端: /path/to/file.mcap`
-- 上传成功：`文件上传成功: [server response]`
-- 上传失败：`上传到云端失败: [error message]`
-- 模块未安装：`dataloop 模块未安装，无法上传到云端`
+此时 `upload.enable=true` 会导致 `AssertionError`。
 
 ## 注意事项
 
-1. **网络连接**：确保网络连接正常，可以访问DataLoop服务器
-2. **权限验证**：确保用户名和密码正确
-3. **项目ID**：确保task_id对应的项目在DataLoop中存在
-4. **异步处理**：上传操作在后台进行，不会阻塞数据采集流程
-5. **错误处理**：上传失败不会影响本地文件保存，只会记录错误日志
+- 上传是**同步阻塞**操作，在上传完成前 `save()` 不会返回。对于大文件或慢网络，可能影响采集流程的响应性。
+- 上传失败不会阻止本地保存成功（本地 MCAP 已落盘），但会在日志中体现。
+- `task_id` 可以是字符串或整数；代码会自动转换为 `int` 后传给 DataLoop API。
+- 用户名和密码以明文存储在配置文件中，注意保护配置文件权限或使用环境变量替代（需要手动扩展 `UploadConfig`）。
 
-## 测试
+## 相关代码
 
-运行测试脚本验证上传功能：
-```bash
-python test_upload.py
-```
-
-## 禁用上传功能
-
-如果需要禁用上传功能，将配置文件中的 `upload.enabled` 设置为 `false`：
-
-```yaml
-upload:
-  enabled: false
-```
+- sampler 实现：[airbot_ie/samplers/mcap_sampler.py](../airbot_ie/samplers/mcap_sampler.py)
+- 配置模型：`UploadConfig` (`airbot_ie/samplers/mcap_sampler.py:23`)
+- 上传逻辑：`_upload_to_cloud()` (`:66`)

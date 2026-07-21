@@ -85,7 +85,7 @@ pre-commit run --all-files
 
 ```bash
 python tests/modules/test_sampler.py --cfg tests/modules/samplers/mock_sampler.yaml
-python tests/test_topic_natural_sort.py
+python tests/unit/test_topic_natural_sort.py
 ```
 
 说明：

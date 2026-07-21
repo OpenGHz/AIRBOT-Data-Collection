@@ -62,4 +62,3 @@ AIRDC 的目标是把这些问题收敛为一个可配置、可扩展、可重�
 
 - [功能清单](./features.md)
 - [架构总览](../architecture/overview.md)
-- [路线图（草案）](../planning/roadmap.md)

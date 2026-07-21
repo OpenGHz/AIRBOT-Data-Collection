@@ -1,12 +1,11 @@
-#+#+#+#+#+#+#+#+#+#+#+#+#+#+#+#+#+#+#+#+
 # Modules
 
 本页用于说明 AIRDC 的模块化扩展方式。
 
 ## Sampler
 
-`Sampler` 用于在采集/演示过程中对数据做“收集/处理/落盘”。在 AIRDC 中采样器基类位于
-`airdc/airdc/common/samplers/basis.py`，核心抽象类是 `DataSampler`（继承自 `ConfigurableBasis`）。
+`Sampler` 用于在采集/演示过程中对数据做”收集/处理/落盘”。在 AIRDC 中采样器基类位于
+`airdc/common/samplers/basis.py`，核心抽象类是 `DataSampler`（继承自 `ConfigurableBasis`）。
 
 ### 必要方法/属性
 

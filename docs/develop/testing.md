@@ -64,29 +64,27 @@ pytestmark = [pytest.mark.hardware, pytest.mark.realsense]
 
 测试有两个环境（见根 `CLAUDE.md`）：
 
-- **默认/软件测试** → conda 环境 `airbot_play_data`（Python 3.10，已装 pytest 与全部硬件库）。
+- **默认/软件测试** → 项目 Python 环境（已装 pytest 与全部硬件库）。
 - **ROS 相关测试** → 项目 `pixi` 环境（Python 3.12，robostack-jazzy，`ROS_VERSION=2`）。
 
 ```bash
-PY=/home/ghz/.mini_conda3/envs/airbot_play_data/bin/python
-
 # 纯软件（CI 目标）：硬件用例自动 Skip，绝不报红
-$PY -m pytest -m software
+pytest -m software
 
 # 默认全量：软件跑 + 硬件按探针自动 Skip（本机有相机/Redis 就会真跑）
-$PY -m pytest
+pytest
 
 # 只跑硬件/服务用例；无资源则全部 Skip，不 fail
-$PY -m pytest -m hardware
+pytest -m hardware
 
 # 真机台架：即使探针没探到也强制跑
-$PY -m pytest -m hardware --run-hardware
+pytest -m hardware --run-hardware
 
 # 只看会跑什么，不执行（确认 manual/ 未被收集、无收集错误）
-$PY -m pytest --collect-only -q
+pytest --collect-only -q
 
 # ROS 用例在 pixi 环境跑
-pixi run python -m pytest -m ros
+pixi run -e ros pytest -m ros
 ```
 
 也可用 pixi 任务：`pixi run test`（= `pytest -m software`）、`pixi run test-hardware`、`pixi run test-all`。
@@ -122,7 +120,7 @@ conftest 提供了开箱即用的 fixture：`mock_camera`（配置好的 MockCam
 | 全量真机回归 | 低（Nightly/发布前） | 定时或版本发布 | 真机环境 `pytest --run-hardware` |
 
 - **增量**：只对本次改动相关的用例/路径跑测，例如 `pytest -m software tests/codec airbot_ie/tests`。
-- **CI**：`.gitlab-ci.yml` 的 `software-test` job 在 `test` 阶段跑 `pytest -m software -ra`。⚠️ 该 job 当前用 `python:3.10` 镜像并 `allow_failure: true`，**需把 `image:` 指向含依赖的 CI 镜像后去掉 `allow_failure`**，才能作为硬门禁。
+- **CI**：`.gitlab-ci.yml` 的 `software-test` job 在 `test` 阶段跑 `pytest -m software -ra`。该 job 当前用 `python:3.10` 镜像并 `allow_failure: true`（待完善依赖镜像后作为硬门禁）。
 
 ---
 

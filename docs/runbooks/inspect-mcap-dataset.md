@@ -28,24 +28,24 @@ mcap info data/<dataset>/<episode>.mcap
 仓库当前自带了一个面向 MCAP 数据集的检查脚本：
 
 ```bash
-python airbot_ie/tests/check_mmk_mcap_dataset.py --dir data/<dataset>
+python airbot_ie/tests/manual/check_mmk_mcap_dataset.py --dir data/<dataset>
 ```
 
 如果需要打印每个文件的详细报告：
 
 ```bash
-python airbot_ie/tests/check_mmk_mcap_dataset.py --dir data/<dataset> --print_details
+python airbot_ie/tests/manual/check_mmk_mcap_dataset.py --dir data/<dataset> --print_details
 ```
 
 如果要忽略缓存重新检查：
 
 ```bash
-python airbot_ie/tests/check_mmk_mcap_dataset.py --dir data/<dataset> --skip_cache
+python airbot_ie/tests/manual/check_mmk_mcap_dataset.py --dir data/<dataset> --skip_cache
 ```
 
 ## 当前检查脚本会做什么
 
-`airbot_ie/tests/check_mmk_mcap_dataset.py` 当前会遍历目录中的 `.mcap` 文件，并输出：
+`airbot_ie/tests/manual/check_mmk_mcap_dataset.py` 当前会遍历目录中的 `.mcap` 文件，并输出：
 
 - 数据集中文件总数
 - 每个文件的错误和告警

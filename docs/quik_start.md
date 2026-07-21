@@ -1,19 +1,40 @@
-# Installation
+# 快速开始
+
+## 推荐路径：使用 Pixi
 
 ```bash
-sudo apt install ./airbot-configure_5.1.6_all.deb -y
-conda create -n airbot_data python=3.10 && conda activate airbot_data
-pip install airbot_py-5.1.6-py3-none-any.whl -i https://mirrors.huaweicloud.com/repository/pypi/simple
-bash install.sh
-# for mcap cli
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install mcap
+# 安装 Pixi
+bash install/install_pixi.sh
+
+# 安装依赖（自动创建 Python 3.12 环境）
+pixi install
+
+# 进入数据采集环境
+pixi shell -e collect
+
+# 或直接运行
+pixi run -e collect airdc
 ```
 
-# Development
+详细说明见 [Pixi 环境与工作流指南](./setup/pixi.md)。
+
+## 传统路径：pip 安装
+
+```bash
+# 创建环境（推荐 Python 3.12）
+python3.12 -m venv .venv && source .venv/bin/activate
+
+# 安装系统依赖与 Python 包
+bash install/install.sh
+
+# 运行
+airdc
+```
+
+## 开发者预提交检查
 
 ```bash
 pip install pre-commit
-pre-commit run --all-files
 pre-commit install
+pre-commit run --all-files
 ```

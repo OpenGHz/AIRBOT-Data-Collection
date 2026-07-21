@@ -21,7 +21,7 @@
 ### 环境要求
 为确保本项目正常运行，请确认您的系统环境满足以下要求：
 
-- **Python** `>= 3.9`（推荐使用 Python 3.10，其他版本未经完整测试）
+- **Python** `>= 3.9`（**推荐使用 Pixi 管理环境，已固定 Python 3.12**；传统 pip/conda 安装支持 Python 3.9+）
 
 - **操作系统**
   - 支持：Linux（含Docker容器；推荐使用Ubuntu，其他系统未经测试）
@@ -34,6 +34,7 @@
 
 - **依赖工具**
   - `POSIX shell`（用于运行一键安装脚本等，如`sh`等）
+  - （推荐）[Pixi](https://pixi.sh) — 现代跨平台包与环境管理工具
   - （可选）虚拟环境管理工具，如 `conda`、`venv`等
 
 - **其他**
@@ -42,37 +43,49 @@
 
 注意，系统环境主要受限于所使用的具体后端，如机器人 SDK 和相机驱动等，请确保这些后端软件的系统要求也得到满足。
 
-### 虚拟环境
-建议创建独立的Python虚拟环境进行数据采集环境安装，以满足Python版本要求同时避免与其他项目的依赖冲突。以`conda`为例，可执行如下命令创建并激活虚拟环境：
+### 安装方式
+
+#### 方式一：Pixi（推荐）
+
+Pixi 是现代跨平台包管理工具，自动管理 Python 3.12 环境及所有依赖（包括 conda 和 PyPI 包），支持多环境隔离（数据采集、训练、推理）。
 
 ```bash
-conda create -n airdc python=3.10 && conda activate airdc
+# 1. 安装 Pixi
+bash install/install_pixi.sh
+
+# 2. 安装项目依赖（自动创建并配置环境）
+pixi install
+
+# 3. 进入数据采集环境（或直接用 pixi run）
+pixi shell -e collect
 ```
 
-### 机器人 Setup
+详细说明见 [Pixi 环境与工作流指南](docs/setup/pixi.md)。
 
-!!! warning "环境要求"
+#### 方式二：传统 pip/conda 安装
 
-    请使用上述创建的Python虚拟环境（如果使用的话）进行后续依赖安装！
-
-数据采集程序依赖于机器人的基本软件环境，请自行安装并配置好对应机器人的驱动程序和Python SDK。部分机器人软件安装参考链接如下：
-
-- [AIRBOT Play/PTK/TOK](docs/setup/airbot_play.md)
-
-### 数据采集
-
-!!! warning "环境要求"
-
-    - 请使用上述安装好机器人相关软件的`Python`环境进行后续依赖安装！
-    - 一键安装脚本默认分别使用`apt`和`pip`进行系统和`Python`依赖安装，如果使用其他包管理工具，请手动安装对应依赖，或者修改安装脚本后再执行。对于前者，也可以在执行安装脚本时传入安装命令作为参数，例如`$SHELL ./install.sh sudo yum install -y`。
-    - 仓库clone注意指定分支/标签，以保证版本一致性。若不指定则默认使用`main`分支，是最新的稳定版本。`develop`分支为最新开发版本，可能存在不稳定情况。如需固定版本，请指定特定标签。
+适合单一用途或已有 Python 环境的场景。
 
 ```bash
+# 1. 创建虚拟环境（可选但推荐）
+conda create -n airdc python=3.12 && conda activate airdc
+# 或使用 venv: python3.12 -m venv .venv && source .venv/bin/activate
+
+# 2. 克隆仓库
 git clone https://github.com/DISCOVER-Robotics/AIRBOT-Data-Collection.git --depth 1 -b <tag/branch> data-collection
 cd data-collection
-conda activate airdc
-$SHELL install/install.sh
+
+# 3. 安装系统依赖与 Python 包
+bash install/install.sh
 ```
+
+`install.sh` 会安装系统依赖（`libturbojpeg`、`gcc` 等）并执行 `pip install -e .[all,airbot]`。
+
+### 机器人 SDK 安装
+
+数据采集依赖机器人的 Python SDK。部分机器人安装参考：
+
+- [AIRBOT Play/PTK/TOK](docs/setup/airbot_play.md)
 
 `$SHELL`一般可简单用`bash`代替（下同）。安装结束后终端可能有红色报错提示部分依赖问题，一般可忽略，进行后续操作即可。
 
@@ -100,7 +113,7 @@ python3 scripts/multi_capture.py 2 4 6 -ff MJPEG MJPEG MJPEG
 
 #### RealSense相机支持
 
-对于Intel-RealSense相机，可以运行`$SHELL install/install_realsense.sh`安装相关依赖，并执行如下命令查看已连接相机的序列号：
+对于Intel-RealSense相机，安装 `pyrealsense2` 依赖后，执行如下命令查看已连接相机的序列号：
 
 ```bash
 python3 airdc/common/devices/cameras/intelrealsense.py

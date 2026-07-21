@@ -174,8 +174,4 @@ manager 的职责不是采集数据，而是触发动作。
 
 ## 9. 读这份文档时的边界
 
-这份文档只描述“现在怎么工作”。如果要讨论未来如何改造：
-
-- 产品层面看 `docs/product/`
-- 规划层面看 `docs/planning/`
-- 技术决策背景看 `docs/decisions/001-config-driven-modular-runtime.md`
+这份文档只描述”现在怎么工作”。如果要讨论未来如何改造，产品层面请参考 `docs/product/`。
