@@ -54,7 +54,7 @@ airdc = { path = ".", extras = ["assis"], editable = true }
 # Editable during development so fixes to mcap_lerobot (train/infer) take effect
 # without reinstall. Provides the mcap-data-loader that airdc (>=0.3.1) requires;
 # base deps are light (no torch/lerobot — those are imported lazily).
-mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
+# mcap-data-loader = { path = "third_party/MCAP-DataLoader", editable = true }
 redis = "*"
 PyNvVideoCodec = "*"
 
