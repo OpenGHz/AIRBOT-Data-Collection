@@ -2,13 +2,16 @@
 
 <div align="center">
 
+[![Docs](https://img.shields.io/badge/docs-online-brightgreen.svg)](https://openghz.github.io/AIRBOT-Data-Collection/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 </div>
 
 ## 文档导航
 
-项目文档入口：
+📖 **在线文档站点：<https://openghz.github.io/AIRBOT-Data-Collection/>**（推荐，支持搜索与侧边栏导航）
+
+其他文档入口：
 
 - [文档地图](docs/README.md)
 - [架构总览](docs/architecture/overview.md)
