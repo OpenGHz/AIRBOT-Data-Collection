@@ -32,20 +32,25 @@ robot:
   url: localhost            # arm gRPC server host
   port: 50051
   components: [arm]         # match training state dim: [arm]=6, [arm, eef]=7
+  # Optional: move to a fixed home joint pose on connect (planned, blocks until
+  # it arrives) before the policy starts. Length must match components:
+  # 6 for [arm], 7 for [arm, eef] (6 arm joints + gripper), same order as the
+  # state. Leave commented to start from wherever the arm currently is.
+  # initial_pose: [0.0, -0.5, 0.5, 0.0, 0.0, 0.0]
   cameras:
     env_camera:
       target: airdc.common.devices.cameras.v4l2.V4L2Camera
       width: 640
       height: 480
       fps: 30
-      extra: { camera_index: usb-0000:00:14.0-1.4 }
+      extra: { camera_index: "usb-0000:00:14.0-1.4" }
     # Add the other camera(s) your checkpoint expects, e.g.:
     follow_camera:
       target: airdc.common.devices.cameras.v4l2.V4L2Camera
       width: 640
       height: 480
       fps: 30
-      extra: { camera_index: usb-0000:00:14.0-2 }
+      extra: { camera_index: "usb-0000:00:14.0-2" }
 
 policy:
   path: outputs/train/my_pi05/checkpoints/last/pretrained_model

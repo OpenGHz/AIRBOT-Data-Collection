@@ -94,3 +94,16 @@ class AIRBOTPlayRobotConfig(RobotConfig):
     cameras: Dict[str, AirdcCameraSpec] = field(default_factory=dict)
     """Mapping of LeRobot observation key -> airdc camera spec. Empty by default
     (state-only). The image observation key is exactly this dict key."""
+
+    # --- startup homing ---
+    initial_pose: Optional[List[float]] = None
+    """Optional home joint pose to move to on connect, BEFORE entering servo mode.
+
+    When set, the arm plans a motion to this pose (airdc RESETTING / PLANNING_POS,
+    blocking until it arrives) so the policy always starts from a known posture.
+    None (default) leaves the arm wherever it is.
+
+    Length must match the proprio dim implied by ``components``: 6 for ``[arm]``
+    (the 6 arm joints), or 7 for ``[arm, eef]`` (6 arm joints + gripper), in the
+    same order as ``observation.state`` / actions. Values are joint positions in
+    the arm's native units (radians for arm joints, the gripper's own unit)."""

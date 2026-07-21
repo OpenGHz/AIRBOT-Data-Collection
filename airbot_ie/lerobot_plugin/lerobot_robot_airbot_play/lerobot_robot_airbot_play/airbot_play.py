@@ -124,6 +124,14 @@ class AIRBOTPlayRobot(Robot):
             if not cam.configure():
                 raise ConnectionError(f"{self}: camera '{key}' failed to configure.")
 
+        # Optionally plan a motion to a known home pose BEFORE servo mode, so the
+        # policy always starts from the same posture. Done in RESETTING mode
+        # (PLANNING_POS, blocking until arrival) — servo mode can't guarantee it.
+        # This runs before lerobot captures its "initial position", so lerobot's
+        # end-of-run "return to initial" also targets this home pose.
+        if self.config.initial_pose is not None:
+            self._move_to_initial_pose()
+
         # Enter servo (streaming) control for inference. The server-side servo
         # layer (MoveIt Servo + max_velocity/acceleration scaling) initializes
         # from the current joint state and velocity-limits toward any target, so
@@ -197,3 +205,39 @@ class AIRBOTPlayRobot(Robot):
 
         self._sys.send_action(airdc_action)
         return action
+
+    # ------------------------------------------------------------------ #
+    # Homing
+    # ------------------------------------------------------------------ #
+    def _move_to_initial_pose(self) -> None:
+        """Plan a blocking motion to ``config.initial_pose`` (RESETTING mode).
+
+        Splits the pose into the arm's 6 joints (+ optional gripper) and drives
+        the airdc System in RESETTING mode, which maps to PLANNING_POS ->
+        ``move_to_joint_pos(..., blocking=True)`` so the call returns only once
+        the arm has arrived. Then it is up to ``connect()`` to switch to servo.
+        """
+        pose = list(self.config.initial_pose)
+        n_arm = len(self.config.arm_joint_names)
+        expected = n_arm + (1 if self._has_eef else 0)
+        if len(pose) != expected:
+            raise ValueError(
+                f"{self}: initial_pose has {len(pose)} values but components "
+                f"{self.config.components} expect {expected} "
+                f"({n_arm} arm{' + 1 gripper' if self._has_eef else ''})."
+            )
+
+        if not self._sys.switch_mode(SystemMode.RESETTING):
+            raise ConnectionError(f"{self}: failed to switch to RESETTING mode.")
+
+        stamp = time_ns()
+        airdc_action: Dict[str, Any] = {
+            "arm/joint_state/position": {"data": pose[:n_arm], "t": stamp},
+        }
+        if self._has_eef:
+            airdc_action["eef/joint_state/position"] = {
+                "data": [pose[n_arm]],
+                "t": stamp,
+            }
+
+        self._sys.send_action(airdc_action)
