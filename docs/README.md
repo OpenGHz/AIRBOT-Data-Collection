@@ -1,66 +1,44 @@
-# AIRDC 文档地图
+# AIRDC 文档
 
-本文档目录将“当前状态”和“规划信息”分开，避免把未来设想与已实现行为混在一起。
+**AIRDC (AI Robot Data Collection)** 是一个专为具身智能研发设计的高性能、模块化、可扩展的机器人多模态数据采集框架。它屏蔽底层硬件复杂性、优化数据吞吐，帮助研究人员和工程师构建大规模、高保真的多模态数据集。
 
-## 当前状态
+> [!TIP]
+> 左侧边栏包含完整导航。若为首次使用，建议从 [项目简介](/intro.md) 与 [快速开始](/quik_start.md) 开始。
 
-### 入门与使用
+## 从这里开始
 
-- [项目简介](./intro.md)
-- [快速开始](./quik_start.md)
-- [README 中的安装与采集流程](../README.md)
-- [Pixi 环境与工作流指南](./setup/pixi.md)
-- [AIRBOT Play/PTK/TOK 安装指南](./setup/airbot_play.md)
-- [AIRBOT Play/PTK/TOK 配置说明](./configure/airbot_play.md)
-- [常见配置调整](./configure/common.md)
-- [配置框架说明](./configure/cfger.md)
-- [AIRBOT Play/PTK/TOK 遥操说明](./teleop/airbot_play.md)
-- [数据采集建议](./suggestion/collect.md)
+- [项目简介](/intro.md) —— AIRDC 是什么、核心特性
+- [快速开始](/quik_start.md) —— 最短安装与运行路径
+- [Pixi 环境与工作流](/setup/pixi.md) —— 推荐的环境管理方式
+- [架构总览](/architecture/overview.md) —— 运行时结构与模块职责
 
-### 训练与推理
+## 文档分区
 
-- [LeRobot 训练与推理](./workflows/lerobot.md)
-- [AAO 仿真数据采集](./workflows/aao.md)
+- **入门与使用** —— 安装、配置、遥操、采集
+- **训练与推理** —— [LeRobot 训练/推理](/workflows/lerobot.md)、[AAO 仿真采集](/workflows/aao.md)
+- **架构与开发** —— 架构、数据流、模块扩展、测试规范
+- **运维与数据检查** —— 运行手册、数据检查、可视化、故障排查
+- **参考** —— [Scripts 工具集](/reference/scripts.md)
+- **产品与规划** —— 产品视角与 Persona（表达产品视角和未来工作，不直接替代代码或运行结果）
 
-### 架构与开发
-
-- [架构总览](./architecture/overview.md)
-- [数据流说明](./architecture/data-flow.md)
-- [模块扩展说明](./develop/modules.md)
-- [测试规范](./develop/testing.md)
-- [状态机配置说明](./fsm.md)
-- [采样器：LeRobot Sampler](./manual/modules/samplers/lerobot_sampler.md)
-
-### 运维与数据检查
-
-- [本地开发运行手册](./runbooks/local-dev.md)
-- [MCAP 数据检查手册](./runbooks/inspect-mcap-dataset.md)
-- [数据可视化：Foxglove](./visualize/foxglove.md)
-- [数据可视化：AIRBOT MCAP Data Viewer](./visualize/airbot.md)
-- [数据可视化：PlotJuggler](./visualize/plot_juggler.md)
-- [数据上传（DataLoop）](./upload.md)
-- [常见问题](./troubleshooting/faq.md)
-- [数据检查与 MCAP CLI](./troubleshooting/data_checking.md)
-- [USB 相机与并发](./troubleshooting/usb_cam.md)
-- [日志与运行记录](./troubleshooting/logging.md)
-- [性能测试](./troubleshooting/performance.md)
-
-### 参考
-
-- [Scripts 工具集](./reference/scripts.md)
-
-## 规划信息
-
-这些文档用于讨论”接下来做什么”，不应作为当前行为的唯一依据。
-
-- [产品概览](./product/overview.md)
-- [功能清单](./product/features.md)
-- [Persona：采集操作员 / 集成工程师](./product/personas/robot-operator.md)
-- [Persona：数据 / 算法工程师](./product/personas/data-engineer.md)
-- [Persona：平台维护者 / 扩展开发者](./product/personas/platform-maintainer.md)
+安装与采集的完整流程也可参考仓库根 [README](https://github.com/OpenGHz/AIRBOT-Data-Collection#readme)。
 
 ## 维护约定
 
 - `docs/architecture/`、`docs/runbooks/` 记录当前代码库已经存在的结构、流程和操作方式。
 - `docs/product/` 用于表达产品视角和未来工作，不直接替代代码或运行结果。
 - 如果当前实现与文档冲突，应优先修正文档或代码，使两者重新对齐。
+- 文档站点基于 [Docsify](https://docsify.js.org) 构建（零构建，纯 Markdown 直出）；本地预览见下文。
+
+## 本地预览文档站点
+
+```bash
+# 方式一：docsify-cli
+npm i -g docsify-cli
+docsify serve docs
+
+# 方式二：任意静态服务器
+python3 -m http.server -d docs 3000
+```
+
+然后浏览器打开 http://localhost:3000 。侧边栏（`_sidebar.md`）使用绝对路径，新增页面时请同步更新。

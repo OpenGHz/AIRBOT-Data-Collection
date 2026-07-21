@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>AIRDC 文档</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+  <meta name="description" content="AIRDC：具身智能的数据引擎 —— 高性能、模块化、可扩展的机器人多模态数据采集框架">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+</head>
+<body>
+  <div id="app">加载中 ...</div>
+  <script>
+    window.$docsify = {
+      name: 'AIRDC 文档',
+      repo: 'https://github.com/OpenGHz/AIRBOT-Data-Collection',
+      loadSidebar: true,
+      loadNavbar: false,
+      coverpage: true,
+      auto2top: true,
+      // 相对路径解析：内容页里的相对链接（如 ../setup/pixi.md）按当前文件解析，
+      // 侧边栏使用绝对路径（以 / 开头）从文档根解析。
+      relativePath: true,
+      subMaxLevel: 3,
+      search: {
+        placeholder: '搜索文档',
+        noData: '找不到结果',
+        depth: 3,
+      },
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md',
+      },
+    }
+  </script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/zoom-image.min.js"></script>
+  <!-- GitHub 风格提示块（> [!WARNING] 等）渲染 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-plugin-flexible-alerts"></script>
+  <!-- 代码高亮 -->
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-python.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+</body>
+</html>
