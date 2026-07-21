@@ -29,7 +29,7 @@ robot:
   type: airbot_play
   url: localhost            # arm gRPC server host
   port: 50051
-  components: [arm]         # match training state dim: [arm]=6, [arm, eef]=7
+  components: [arm, eef]    # match training state dim: [arm]=6, [arm, eef]=7
   cameras:
     env_camera:
       target: airdc.common.devices.cameras.v4l2.V4L2Camera
