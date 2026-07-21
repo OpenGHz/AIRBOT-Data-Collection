@@ -80,15 +80,34 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
             raise RuntimeError(f"Failed to configure manager: {name}.")
     interval = 1.0 / config.update_rate if config.update_rate > 0 else 0.0
     logger.info(f"Update rate: {config.update_rate} Hz")
+    manager_update_every = dict(config.manager_update_every)
+    unknown = set(manager_update_every) - set(managers)
+    if unknown:
+        logger.warning(
+            f"manager_update_every references unknown manager(s) {sorted(unknown)}; "
+            f"known managers: {sorted(managers)}."
+        )
+    if manager_update_every:
+        logger.info(f"Per-manager update dividers (ticks): {manager_update_every}")
     # start updating the managers
     # TODO: use async io to update asynchronously?
     time_queue = deque(maxlen=20)
     total_start = time.perf_counter()
     metrics = defaultdict(dict)
     try:
+        tick = 0
         while True:
             start_time = time.perf_counter()
             for name, manager in managers.items():
+                # Per-manager tick divider. `tick` is a single loop-wide counter
+                # that is NOT reset per episode, so this schedule is phase-aligned
+                # to global tick 0 (not to each episode's first sampling tick):
+                # an episode entering sampling on a tick where tick % N != 0 will
+                # have its first frame(s) skipped. See
+                # DataCollectionConfig.manager_update_every for the full caveat
+                # and the episode-local `sample_every` alternative.
+                if tick % manager_update_every.get(name, 1) != 0:
+                    continue
                 m_start = time.perf_counter()
                 if not manager.update():
                     logger.warning(f"Failed to update manager: {name}.")
@@ -116,6 +135,7 @@ def main_loop(config: DataCollectionArgs, job_id: Optional[int] = None) -> int:
                     logger.warning(
                         f"The main loop takes too long, timeout {-sleep_time:.4f} s."
                     )
+            tick += 1
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received. Exiting...")
     finally:
