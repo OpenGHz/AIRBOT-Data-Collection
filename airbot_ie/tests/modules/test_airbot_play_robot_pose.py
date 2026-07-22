@@ -29,13 +29,13 @@ from lerobot_robot_airbot_play import (  # noqa: E402
 pytestmark = pytest.mark.software
 
 _POSE_FEATURES = [
-    "eef.x",
-    "eef.y",
-    "eef.z",
-    "eef.qx",
-    "eef.qy",
-    "eef.qz",
-    "eef.qw",
+    "eef_x.pos",
+    "eef_y.pos",
+    "eef_z.pos",
+    "eef_qx.pos",
+    "eef_qy.pos",
+    "eef_qz.pos",
+    "eef_qw.pos",
     "gripper.pos",
 ]
 
@@ -66,26 +66,56 @@ def test_pose_send_action_roundtrips_through_observation():
     robot.connect()  # switches the mock System into SAMPLING (pose servo)
     try:
         action = {
-            "eef.x": 0.1,
-            "eef.y": 0.2,
-            "eef.z": 0.3,
-            "eef.qx": 0.0,
-            "eef.qy": 0.0,
-            "eef.qz": 0.0,
-            "eef.qw": 1.0,
+            "eef_x.pos": 0.1,
+            "eef_y.pos": 0.2,
+            "eef_z.pos": 0.3,
+            "eef_qx.pos": 0.0,
+            "eef_qy.pos": 0.0,
+            "eef_qz.pos": 0.0,
+            "eef_qw.pos": 1.0,
             "gripper.pos": 0.02,
         }
         robot.send_action(action)
         obs = robot.get_observation()
 
         assert set(obs) == set(_POSE_FEATURES)
-        assert obs["eef.x"] == pytest.approx(0.1)
-        assert obs["eef.y"] == pytest.approx(0.2)
-        assert obs["eef.z"] == pytest.approx(0.3)
-        assert obs["eef.qw"] == pytest.approx(1.0)
+        assert obs["eef_x.pos"] == pytest.approx(0.1)
+        assert obs["eef_y.pos"] == pytest.approx(0.2)
+        assert obs["eef_z.pos"] == pytest.approx(0.3)
+        assert obs["eef_qw.pos"] == pytest.approx(1.0)
         assert obs["gripper.pos"] == pytest.approx(0.02)
     finally:
         robot.disconnect()
+
+
+def test_features_survive_lerobot_pos_filter():
+    """Every scalar feature must end in '.pos' or LeRobot silently drops it.
+
+    Mirrors lerobot/rollout/context.py, which builds observation.state and the
+    action key order with ``v is float and k.endswith(".pos")`` (observation)
+    and ``k.endswith(".pos")`` (action). A key failing this filter does NOT
+    raise — it shrinks observation.state / the action vector (once reducing this
+    8-dim pose contract to just the 1-dim gripper), so guard it here.
+    """
+    robot = _pose_robot()
+    action_hw = [k for k in robot.action_features if k.endswith(".pos")]
+    obs_hw = [
+        k
+        for k, v in robot.observation_features.items()
+        if isinstance(v, tuple) or (v is float and k.endswith(".pos"))
+    ]
+    assert action_hw == _POSE_FEATURES
+    assert obs_hw == _POSE_FEATURES
+
+
+def test_pose_mode_requires_eef_component():
+    """pose mode without `eef` fails loudly: there is no eef/pose/* to read."""
+    with pytest.raises(ValueError, match="requires 'eef' in components"):
+        AIRBOTPlayRobot(
+            AIRBOTPlayRobotConfig(
+                mock=True, control_mode="pose", components=["arm"], cameras={}
+            )
+        )
 
 
 def test_joint_mode_default_unchanged():

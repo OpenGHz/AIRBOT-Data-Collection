@@ -43,6 +43,23 @@ class AIRBOTPlayRobot(Robot):
         self._cameras: Dict[str, Any] = {}  # key -> airdc camera Sensor
         self._has_eef = "eef" in config.components
 
+        if config.control_mode not in ("joint", "pose"):
+            raise ValueError(
+                f"{type(self).__name__}: control_mode must be 'joint' or 'pose', "
+                f"got {config.control_mode!r}."
+            )
+        if config.control_mode == "pose" and not self._has_eef:
+            # The airdc System exposes the arm's EEF cartesian pose under the
+            # *eef* component (AIRBOTPlayConfig.model_post_init discards POSE from
+            # the arm component). With components=[arm] there is no eef/pose/* at
+            # all, so fail here instead of KeyError-ing deep inside get_observation.
+            raise ValueError(
+                f"{type(self).__name__}: control_mode='pose' requires 'eef' in "
+                f"components (got {list(config.components)}). The arm's EEF pose is "
+                "published under the eef component's observation, so [arm] alone "
+                "exposes no eef/pose/* to read."
+            )
+
     # ------------------------------------------------------------------ #
     # Feature contracts (must be callable while disconnected)
     # ------------------------------------------------------------------ #

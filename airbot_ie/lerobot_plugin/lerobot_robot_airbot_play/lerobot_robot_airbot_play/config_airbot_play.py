@@ -108,18 +108,32 @@ class AIRBOTPlayRobotConfig(RobotConfig):
     ``components``. Used in both control modes (the gripper is always a joint)."""
 
     # --- pose feature naming (control_mode="pose") ---
+    # IMPORTANT: every scalar (non-camera) state/action feature key MUST end in
+    # ".pos". LeRobot's rollout context filters the robot's scalar features with
+    # `v is float and k.endswith(".pos")` (observation) and `k.endswith(".pos")`
+    # (action) — see lerobot/rollout/context.py. Keys that don't match are
+    # silently dropped, which would shrink observation.state / the action vector
+    # (e.g. to just the gripper) instead of raising. So the pose components are
+    # named `eef_x.pos` ... `eef_qw.pos` rather than `eef.x` / `eef.qx`.
     position_keys: List[str] = field(
-        default_factory=lambda: ["eef.x", "eef.y", "eef.z"]
+        default_factory=lambda: ["eef_x.pos", "eef_y.pos", "eef_z.pos"]
     )
     """LeRobot feature names for the EEF position xyz (3). Order maps to the airdc
-    ``eef/pose/position`` vector in order. Used only in ``control_mode="pose"``."""
+    ``eef/pose/position`` vector in order. Must end in ".pos" (see note above).
+    Used only in ``control_mode="pose"``."""
 
     orientation_keys: List[str] = field(
-        default_factory=lambda: ["eef.qx", "eef.qy", "eef.qz", "eef.qw"]
+        default_factory=lambda: [
+            "eef_qx.pos",
+            "eef_qy.pos",
+            "eef_qz.pos",
+            "eef_qw.pos",
+        ]
     )
     """LeRobot feature names for the EEF orientation quaternion, xyzw (4). Order
     maps to the airdc ``eef/pose/orientation`` vector (xyzw, as returned by
-    ``get_end_pose``). Used only in ``control_mode="pose"``."""
+    ``get_end_pose``). Must end in ".pos" (see note above). Used only in
+    ``control_mode="pose"``."""
 
     # --- cameras (reused airdc devices) ---
     cameras: Dict[str, AirdcCameraSpec] = field(default_factory=dict)
