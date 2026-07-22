@@ -28,7 +28,6 @@
 env:
   HF_ENDPOINT: "https://hf-mirror.com"
   HF_HUB_DISABLE_XET: "1"
-  WANDB_MODE: disabled
 
 # ============================================================================
 # Common training knobs — just edit the value after each key.
@@ -45,6 +44,22 @@ seed: 1000                 # random seed (same seed = reproducible run)
 # save_checkpoint: true    # whether to save checkpoints at all (false = never write)
 # resume: false            # continue from an existing checkpoint under output_dir
 # ============================================================================
+
+# ============================================================================
+# Training curves via Weights & Biases (the ONLY curve backend in this lerobot —
+# there is no tensorboard / local-csv). Default mode is `offline`: metrics are
+# recorded to <output_dir>/wandb/ with NO network during training. To view them,
+# upload a run to the wandb dashboard — one-time `wandb login`, doable mid-run,
+# later, or from another networked machine:
+#     pixi run -e pi05 wandb login          # key: https://wandb.ai/authorize
+#     pixi run -e pi05 wandb sync outputs/train/pi05/wandb/latest-run
+# Training box can reach wandb.ai and you want LIVE curves? set mode: online
+# (real-time dashboard, no manual sync). enable: false = no curve logging at all.
+# ============================================================================
+wandb:
+  enable: true               # false = no curves, just the console metrics line
+  project: airbot-pi05       # wandb project that groups your runs
+  mode: offline              # offline = local, `wandb sync` to view; online = live dashboard
 
 policy:
   type: pi05

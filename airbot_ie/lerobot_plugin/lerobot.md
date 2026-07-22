@@ -23,13 +23,12 @@ export POLICY=smolvla     # 轻量 ~450M，8G 显卡可训可推
 
 训练与推理都用同一种方式驱动：**一个命令 + `-c <config>.yaml`**。命令入口 `mcap-lerobot-train` / `mcap-lerobot-infer` 由 `mcap-data-loader` 提供，内部分别调用 `lerobot-train` / `lerobot-rollout`，与策略无关。
 
-运行时环境变量（`WANDB_MODE`、`HF_HUB_OFFLINE` 等）写在配置文件的顶层 `env:` 块里，由 `mcap-data-loader` 在启动时用 `os.environ.setdefault` 应用（**shell 里已设的同名变量优先**），不会传给下游 lerobot：
+运行时环境变量（`HF_HUB_OFFLINE` 等）写在配置文件的顶层 `env:` 块里，由 `mcap-data-loader` 在启动时用 `os.environ.setdefault` 应用（**shell 里已设的同名变量优先**），不会传给下游 lerobot：
 
 ```yaml
 env:
   HF_HUB_OFFLINE: "1"        # 权重已在 HF 缓存时安全；首次下载权重时去掉此行
   TRANSFORMERS_OFFLINE: "1"
-  WANDB_MODE: disabled
 ```
 
 ---
@@ -58,7 +57,7 @@ pixi run -e $POLICY $POLICY-check
 
 1. 按数据集的实际情况修改配置`airbot_ie/lerobot_plugin/configs/${POLICY}_train.yaml`里的 `mcap.*`（状态/动作/相机 topic）与 `task_*`。
 
-2. 启动训练（离线、关闭 wandb 等由配置里的 `env:` 块提供）：
+2. 启动训练（离线等运行时环境由配置里的 `env:` 块提供；训练曲线默认开启 wandb，见 [1a](#1a-查看训练曲线wandb)）：
 
    ```bash
    pixi run -e $POLICY mcap-lerobot-train -c airbot_ie/lerobot_plugin/configs/${POLICY}_train.yaml
@@ -72,6 +71,30 @@ pixi run -e $POLICY $POLICY-check
    ```
 
 产物（含 checkpoint）默认写到 `outputs/train/<job>/checkpoints/<step>/pretrained_model/`。
+
+### 1a. 查看训练曲线（wandb）
+
+训练曲线唯一的后端是 [wandb](https://wandb.ai)。两个 `*_train.yaml` 已默认开启，且默认 **offline**（训练全程零联网，指标写到本地 `<output_dir>/wandb/`）：
+
+```yaml
+wandb:
+  enable: true
+  project: airbot-smolvla    # 或 airbot-pi05
+  mode: offline              # offline=落本地、sync 后查看；online=云端实时曲线
+```
+
+**offline（默认）** —— 要看曲线时把 run 上传到 wandb 面板。只需一次性 `wandb login`（可在训练中途、事后、或换一台有网的机器上做）：
+
+```bash
+pixi run -e $POLICY wandb login                               # key: https://wandb.ai/authorize（CN 超时先设代理）
+pixi run -e $POLICY wandb sync outputs/train/$POLICY/wandb/latest-run
+```
+
+> sync 是**快照**：训练还在跑时也能 sync 看当前进度，之后再 sync 增量补齐；offline 只是把联网从训练时挪到 sync 时，wandb 账号仍然需要。
+
+**online（可选）** —— 训练机能直连 wandb.ai 时，把 `mode` 改成 `online`；启动后终端打印 `Track this run --> <url>`，打开即**实时**刷新 loss / lr / grad_norm，免手动 sync。
+
+**关闭曲线** —— `wandb.enable: false`，只保留每 `log_freq` 步的控制台 metrics 行。
 
 ---
 

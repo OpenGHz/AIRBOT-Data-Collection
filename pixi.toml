@@ -172,6 +172,20 @@ av = ">=15.0.0,<16.0.0"
 jsonlines = ">=4.0.0,<5.0.0"
 
 # ---------------------------------------------------------------------------
+# letrain feature (delta over mlbase+ledata): training-only extras. Kept OUT of
+# `ledata` so it is NOT pulled into the inference environments (which also share
+# `ledata`) — wandb drags in protobuf/sentry/gql/etc., and re-solving the
+# verified infer stack for a logger that inference never calls is pure risk.
+# Composed only into the `pi05` and `smolvla` TRAINING environments below.
+#   - wandb: the only metrics/curve backend lerobot-train supports (there is no
+#     tensorboard/local-csv logging). Off by default; enable per run with a
+#     `wandb:` block in the train YAML (wandb.enable + wandb.project + wandb.mode).
+#     See configs/smolvla_train.yaml / configs/pi05_train.yaml.
+# ---------------------------------------------------------------------------
+[feature.letrain.pypi-dependencies]
+wandb = ">=0.18"
+
+# ---------------------------------------------------------------------------
 # pi05 feature (delta over mlbase+ledata): pi0.5 (LoRA) policy. Migrated from
 # third_party/MCAP-DataLoader/setup_pi05_server.sh (the server-only hacks there —
 # pip mirror config, hf_xet/flash_attn/torchcodec uninstalls, numpy==1.26.4 pin —
@@ -353,7 +367,7 @@ ros = ["ros", "aao-core"]
 # `airbotpy` provides the airbot_py SDK; `airbot` adds the lerobot plugin on top.
 infer-airbot = ["mlbase", "ledata", "airbotpy", "airbot"]
 infer-aao = ["mlbase", "ledata", "aao-core", "aao"]
-pi05 = ["mlbase", "ledata", "pi05"]
+pi05 = ["mlbase", "ledata", "letrain", "pi05"]
 pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05"]
-smolvla = ["mlbase", "ledata", "smolvla"]
+smolvla = ["mlbase", "ledata", "letrain", "smolvla"]
 smolvla-infer = ["mlbase", "ledata", "airbotpy", "airbot", "smolvla"]
