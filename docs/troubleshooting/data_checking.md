@@ -10,7 +10,7 @@
 mcap info <file_name>.mcap
 ```
 
-这将列出MCAP文件的基本信息，包括版本、大小、时间范围和话题列表等。
+这将列出MCAP文件的基本信息，包括版本、大小、时间范围和话题列表等。各 topic 名称后缀（如 `joint_state/effort`、`pose/rot6d`、`follow`/`lead`）的物理含义见[数据 Topic 命名与物理含义](../reference/data_topics.md)。
 
 ### 列出附件
 

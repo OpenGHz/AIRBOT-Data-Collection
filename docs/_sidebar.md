@@ -39,6 +39,7 @@
   - [性能测试](/troubleshooting/performance.md)
 
 - 参考
+  - [数据 Topic 命名与物理含义](/reference/data_topics.md)
   - [Scripts 工具集](/reference/scripts.md)
 
 - 产品与规划

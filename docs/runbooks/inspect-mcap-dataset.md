@@ -23,6 +23,8 @@ mcap info data/<dataset>/<episode>.mcap
 - message 数量
 - attachment 是否存在
 
+各 topic 名称后缀的物理含义（如 `follow`/`lead`、`joint_state/{position,velocity,effort}`、`pose/{position,orientation,rot6d}`、`_rela`）见[数据 Topic 命名与物理含义](../reference/data_topics.md)。
+
 ## 检查整包数据
 
 仓库当前自带了一个面向 MCAP 数据集的检查脚本：
