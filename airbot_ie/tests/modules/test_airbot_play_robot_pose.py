@@ -20,6 +20,9 @@ pytest.importorskip(
     "airbot_ie.robots.airbot_play_mock",
     reason="airbot_ie deps unmet (e.g. airbot_hardware_py missing)",
 )
+pytest.importorskip(
+    "lerobot_robot_airbot_play", reason="airbot_play plugin not installed in this env"
+)
 
 from lerobot_robot_airbot_play import (  # noqa: E402
     AIRBOTPlayRobot,

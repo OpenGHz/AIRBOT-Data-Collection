@@ -38,8 +38,11 @@ robot:
   has_gripper: true
   # observation.state / action = EEF pose (position xyz + quaternion xyzw) + gripper.
   # These aggregate (by lerobot) into the 7/8-dim state the checkpoint expects.
-  position_keys: [eef.x, eef.y, eef.z]
-  orientation_keys: [eef.qx, eef.qy, eef.qz, eef.qw]
+  # Every key MUST end in `.pos`: lerobot's rollout keeps only scalar features
+  # matching `k.endswith(".pos")` and silently DROPS the rest (which would leave
+  # just the gripper here, a 1-dim state, with no error).
+  position_keys: [eef_x.pos, eef_y.pos, eef_z.pos]
+  orientation_keys: [eef_qx.pos, eef_qy.pos, eef_qz.pos, eef_qw.pos]
   gripper_key: gripper.pos
   # LeRobot image feature key -> aao camera name. Keys match the training feature
   # names (observation.images.env_camera / .follow_camera); values are the sim's

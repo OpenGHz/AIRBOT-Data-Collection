@@ -53,6 +53,18 @@ class AAOSimRobot(Robot):
         self._backend = None
         self._env = None  # single UnifiedMujocoEnv (batch=1)
 
+        # LeRobot's rollout context keeps only scalar features whose key ends in
+        # ".pos" (see lerobot/rollout/context.py). A key that fails the filter is
+        # dropped SILENTLY, shrinking observation.state / the action vector
+        # instead of raising — so reject it up front.
+        bad = [name for name in self._state_names if not name.endswith(".pos")]
+        if bad:
+            raise ValueError(
+                f"{type(self).__name__}: state/action feature names must end in "
+                f"'.pos' or LeRobot silently drops them from observation.state "
+                f"and the action vector; offending keys: {bad}."
+            )
+
     # ------------------------------------------------------------------ #
     # Feature contracts (callable while disconnected)
     # ------------------------------------------------------------------ #

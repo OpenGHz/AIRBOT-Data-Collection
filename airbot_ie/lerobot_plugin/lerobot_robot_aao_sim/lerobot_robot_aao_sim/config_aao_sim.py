@@ -54,15 +54,28 @@ class AAOSimRobotConfig(RobotConfig):
     """Number of env steps to advance per send_action (physics settle)."""
 
     # --- LeRobot-facing feature naming ---
+    # IMPORTANT: every scalar (non-camera) state/action feature key MUST end in
+    # ".pos". LeRobot's rollout context filters the robot's scalar features with
+    # `v is float and k.endswith(".pos")` (observation) and `k.endswith(".pos")`
+    # (action) — see lerobot/rollout/context.py. Keys that don't match are
+    # silently DROPPED rather than raising, which would shrink observation.state
+    # and the action vector (here: down to just the gripper). Hence `eef_x.pos`
+    # rather than `eef.x`.
     position_keys: List[str] = field(
-        default_factory=lambda: ["eef.x", "eef.y", "eef.z"]
+        default_factory=lambda: ["eef_x.pos", "eef_y.pos", "eef_z.pos"]
     )
-    """Feature names for the EEF position (3)."""
+    """Feature names for the EEF position (3). Must end in ".pos" (see note above)."""
 
     orientation_keys: List[str] = field(
-        default_factory=lambda: ["eef.qx", "eef.qy", "eef.qz", "eef.qw"]
+        default_factory=lambda: [
+            "eef_qx.pos",
+            "eef_qy.pos",
+            "eef_qz.pos",
+            "eef_qw.pos",
+        ]
     )
-    """Feature names for the EEF orientation quaternion, xyzw (4)."""
+    """Feature names for the EEF orientation quaternion, xyzw (4). Must end in
+    ".pos" (see note above)."""
 
     has_gripper: bool = True
     """Whether to expose/consume a gripper DoF."""

@@ -52,7 +52,7 @@ robot:
       width: 640
       height: 480
       fps: 30
-      extra: { camera_index: "usb-0000:00:14.0-2" }
+      extra: { camera_index: "usb-0000:00:14.0-3" }
 
 policy:
   path: outputs/train/my_smolvla/checkpoints/last/pretrained_model

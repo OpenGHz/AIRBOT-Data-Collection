@@ -23,8 +23,11 @@ robot:
   kinematic: false
   substeps: 1
   has_gripper: true
-  # position_keys / orientation_keys / gripper_key default to eef.{x,y,z} +
-  # eef.{qx,qy,qz,qw} + gripper.pos; override to match the checkpoint's features.
+  # position_keys / orientation_keys / gripper_key default to eef_{x,y,z}.pos +
+  # eef_{qx,qy,qz,qw}.pos + gripper.pos; override to match the checkpoint's
+  # features. Any override MUST keep the `.pos` suffix: lerobot's rollout keeps
+  # only scalar features matching `k.endswith(".pos")` and silently drops the
+  # rest, shrinking observation.state instead of raising.
   # Cameras rendered by the sim (MuJoCo offscreen). Map LeRobot image key -> aao
   # camera name; the names must exist in the task_config's env.cameras (the door
   # scene has eef_wrist_cam + env2_cam at 640x352). camera_shape must match.
