@@ -6,3 +6,4 @@ dataset:
 
 sampler:
   _target_: airdc.common.samplers.mcap_samplers.sampler_flb.McapFlbDataSampler
+  add_relative_data: True

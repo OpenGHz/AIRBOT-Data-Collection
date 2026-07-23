@@ -6,6 +6,7 @@ import numpy as np
 from mcap_data_loader.utils.mcap_utils import MediaType
 from mcap_data_loader.serialization.flb import McapFlatBuffersWriter, FlatBuffersSchemas
 from mcap_data_loader.utils.rela_abs import PoseGlobalRelaAbsTool
+from mcap_data_loader.utils.rot6d import Rotation6D
 from airdc.common.samplers.mcap_samplers.basis import (
     McapDataSamplerBasis,
     McapDataSamplerBasisConfig,
@@ -18,13 +19,16 @@ from airdc.common.samplers.video_sampler import (
 
 
 class _RelativeFlbWriter(McapFlatBuffersWriter):
-    """McapFlatBuffersWriter subclass that auto-writes relative data for position/orientation topics.
+    """McapFlatBuffersWriter subclass that auto-writes relative data for position/orientation/rot6d topics.
 
-    For topics ending with 'position' or 'orientation', also writes '<topic>_rela'
-    with data relative to the first frame. Each topic maintains its own reference frame independently.
+    For topics ending with 'position', 'orientation', or 'rotation_6d', also writes '<topic>_rela'
+    with data relative to the first frame. For orientation topics, additionally derives a 'rotation_6d'
+    topic (if not already present) and its '_rela' variant. Each topic maintains its own reference
+    frame independently; first-writer-wins prevents collisions.
     """
 
     _IDENTITY_QUAT = np.array([0, 0, 0, 1], dtype=np.float32)
+    _IDENTITY_ROT6D = np.array([1, 0, 0, 0, 1, 0], dtype=np.float32)
 
     def __init__(self, initial_builder_size: int = 1024):
         super().__init__(initial_builder_size)
@@ -34,9 +38,11 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
         """Clear reference frames (call at episode start)."""
         self._position_refs = {}
         self._orientation_refs = {}
+        self._rot6d_refs = {}
         # Owner of each "_rela" topic: "auto" (generated here) or "source"
         # (already in the input). First writer wins; the other side is skipped
         # so a pre-existing _rela topic can't collide with a generated one.
+        # Also tracks ownership of derived rotation_6d topics.
         self._rela_owner = {}
 
     def unset_writer(self, finish: bool = False):
@@ -60,40 +66,97 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
         super().add_message(schema_type, topic, data, publish_time, log_time, **kwargs)
 
         if schema_type is not FlatBuffersSchemas.FLOAT_ARRAY:
-            return  # Only float arrays carry position/orientation data
+            return  # Only float arrays carry position/orientation/rot6d data
 
         arr = np.asarray(data, dtype=np.float32)
 
         if topic.endswith("position"):
             if topic not in self._position_refs:
-                # First position: set reference (no copy needed, asarray already creates new array)
                 self._position_refs[topic] = arr
                 rela = np.zeros_like(arr)
             else:
-                # Subsequent: compute relative (vector subtraction)
                 rela = arr - self._position_refs[topic]
+
+            rela_topic = topic + "_rela"
+            if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
+                super().add_message(
+                    FlatBuffersSchemas.FLOAT_ARRAY,
+                    rela_topic,
+                    rela,
+                    publish_time,
+                    log_time,
+                )
+
         elif topic.endswith("orientation"):
             if topic not in self._orientation_refs:
-                # First orientation: set reference (no copy needed)
                 self._orientation_refs[topic] = arr
                 rela = self._IDENTITY_QUAT
             else:
-                # Subsequent: compute relative (quaternion: arr * ref^-1)
-                # Parent will convert to float32 automatically
                 rela = PoseGlobalRelaAbsTool.to_rela_orientation(
                     arr, self._orientation_refs[topic]
                 )
-        else:
-            return  # Only handle position/orientation topics
 
-        # Write relative data with "_rela" suffix, unless the source already
-        # provided this topic first (first-writer-wins). Routing through
-        # super().add_message auto-registers the generated channel.
-        rela_topic = topic + "_rela"
-        if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
-            super().add_message(
-                FlatBuffersSchemas.FLOAT_ARRAY, rela_topic, rela, publish_time, log_time
-            )
+            # Write orientation_rela
+            rela_topic = topic + "_rela"
+            if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
+                super().add_message(
+                    FlatBuffersSchemas.FLOAT_ARRAY,
+                    rela_topic,
+                    rela,
+                    publish_time,
+                    log_time,
+                )
+
+            # Derive rotation_6d from orientation (if not already present)
+            # Topic naming: "foo/bar/orientation" -> "foo/bar/rotation_6d"
+            if topic.endswith("/orientation"):
+                rot6d_topic = topic[: -len("/orientation")] + "/rotation_6d"
+            else:
+                rot6d_topic = topic[: -len("orientation")] + "rotation_6d"
+
+            # Only derive if no source rot6d claimed this topic yet (first-writer-wins)
+            if self._rela_owner.setdefault(rot6d_topic, "auto") == "auto":
+                # Derive rot6d from the current orientation
+                rot6d_arr = Rotation6D.quat_to_rot6d(arr)
+                super().add_message(
+                    FlatBuffersSchemas.FLOAT_ARRAY,
+                    rot6d_topic,
+                    rot6d_arr,
+                    publish_time,
+                    log_time,
+                )
+
+                # Derive rot6d_rela from orientation_rela (equivalent to to_rela_rot6d per regression)
+                rot6d_rela_topic = rot6d_topic + "_rela"
+                if self._rela_owner.setdefault(rot6d_rela_topic, "auto") == "auto":
+                    rot6d_rela_arr = Rotation6D.quat_to_rot6d(rela)
+                    super().add_message(
+                        FlatBuffersSchemas.FLOAT_ARRAY,
+                        rot6d_rela_topic,
+                        rot6d_rela_arr,
+                        publish_time,
+                        log_time,
+                    )
+
+        elif topic.endswith("rotation_6d"):
+            # Mark this topic as claimed by source data (not derived)
+            self._rela_owner.setdefault(topic, "source")
+
+            if topic not in self._rot6d_refs:
+                self._rot6d_refs[topic] = arr
+                rela = self._IDENTITY_ROT6D
+            else:
+                rela = PoseGlobalRelaAbsTool.to_rela_rot6d(arr, self._rot6d_refs[topic])
+
+            rela_topic = topic + "_rela"
+            if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
+                super().add_message(
+                    FlatBuffersSchemas.FLOAT_ARRAY,
+                    rela_topic,
+                    rela,
+                    publish_time,
+                    log_time,
+                )
 
 
 class McapFlbDataSamplerConfig(McapDataSamplerBasisConfig):
