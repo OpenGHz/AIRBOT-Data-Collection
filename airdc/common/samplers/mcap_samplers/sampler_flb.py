@@ -2,8 +2,10 @@ from pydantic import PositiveInt
 from typing import Literal, List
 from time import time_ns
 from functools import cache
+import numpy as np
 from mcap_data_loader.utils.mcap_utils import MediaType
 from mcap_data_loader.serialization.flb import McapFlatBuffersWriter, FlatBuffersSchemas
+from mcap_data_loader.utils.rela_abs import PoseGlobalRelaAbsTool
 from airdc.common.samplers.mcap_samplers.basis import (
     McapDataSamplerBasis,
     McapDataSamplerBasisConfig,
@@ -15,11 +17,93 @@ from airdc.common.samplers.video_sampler import (
 )
 
 
+class _RelativeFlbWriter(McapFlatBuffersWriter):
+    """McapFlatBuffersWriter subclass that auto-writes relative data for position/orientation topics.
+
+    For topics ending with 'position' or 'orientation', also writes '<topic>_rela'
+    with data relative to the first frame. Each topic maintains its own reference frame independently.
+    """
+
+    _IDENTITY_QUAT = np.array([0, 0, 0, 1], dtype=np.float32)
+
+    def __init__(self, initial_builder_size: int = 1024):
+        super().__init__(initial_builder_size)
+        self.reset_references()
+
+    def reset_references(self) -> None:
+        """Clear reference frames (call at episode start)."""
+        self._position_refs = {}
+        self._orientation_refs = {}
+        # Owner of each "_rela" topic: "auto" (generated here) or "source"
+        # (already in the input). First writer wins; the other side is skipped
+        # so a pre-existing _rela topic can't collide with a generated one.
+        self._rela_owner = {}
+
+    def unset_writer(self, finish: bool = False):
+        """Unset writer and clear reference frames (mirrors _stat.clear() in parent)."""
+        super().unset_writer(finish)
+        self.reset_references()
+
+    def add_message(
+        self, schema_type, topic: str, data, publish_time: int, log_time: int, **kwargs
+    ):
+        # A source-provided "_rela" topic: honor first-writer-wins so it does
+        # not collide with an auto-generated one of the same name.
+        if schema_type is FlatBuffersSchemas.FLOAT_ARRAY and topic.endswith("_rela"):
+            if self._rela_owner.setdefault(topic, "source") == "source":
+                super().add_message(
+                    schema_type, topic, data, publish_time, log_time, **kwargs
+                )
+            return
+
+        # Write the original message first (super() also auto-registers its channel).
+        super().add_message(schema_type, topic, data, publish_time, log_time, **kwargs)
+
+        if schema_type is not FlatBuffersSchemas.FLOAT_ARRAY:
+            return  # Only float arrays carry position/orientation data
+
+        arr = np.asarray(data, dtype=np.float32)
+
+        if topic.endswith("position"):
+            if topic not in self._position_refs:
+                # First position: set reference (no copy needed, asarray already creates new array)
+                self._position_refs[topic] = arr
+                rela = np.zeros_like(arr)
+            else:
+                # Subsequent: compute relative (vector subtraction)
+                rela = arr - self._position_refs[topic]
+        elif topic.endswith("orientation"):
+            if topic not in self._orientation_refs:
+                # First orientation: set reference (no copy needed)
+                self._orientation_refs[topic] = arr
+                rela = self._IDENTITY_QUAT
+            else:
+                # Subsequent: compute relative (quaternion: arr * ref^-1)
+                # Parent will convert to float32 automatically
+                rela = PoseGlobalRelaAbsTool.to_rela_orientation(
+                    arr, self._orientation_refs[topic]
+                )
+        else:
+            return  # Only handle position/orientation topics
+
+        # Write relative data with "_rela" suffix, unless the source already
+        # provided this topic first (first-writer-wins). Routing through
+        # super().add_message auto-registers the generated channel.
+        rela_topic = topic + "_rela"
+        if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
+            super().add_message(
+                FlatBuffersSchemas.FLOAT_ARRAY, rela_topic, rela, publish_time, log_time
+            )
+
+
 class McapFlbDataSamplerConfig(McapDataSamplerBasisConfig):
     """Configuration for MCAP data sampler."""
 
     initial_builder_size: PositiveInt = 1024 * 1024  # 1 MB
     """Initial size of the FlatBuffers builder."""
+    add_relative_data: bool = False
+    """Whether to auto-write a '<topic>_rela' topic (data relative to the first frame)
+    for every topic ending in 'position'/'orientation'. Disable to write raw data only."""
     video_save_to: Literal["file", "folder", "both"] = "file"
     """Where to save the video data: 'file' for MCAP attachment, 'folder' for separate folder, 'both' for both."""
     encoder: VideoEncoderConfig = VideoEncoderConfig()
@@ -47,6 +131,9 @@ class McapFlbDataSampler(McapDataSamplerBasis):
         return self._video_sampler.configure()
 
     def _create_writer(self):
+        if self.config.add_relative_data:
+            return _RelativeFlbWriter(self.config.initial_builder_size)
+        # Disabled: stock writer, no relative-data machinery or overhead.
         return McapFlatBuffersWriter(self.config.initial_builder_size)
 
     def clear(self) -> None:
