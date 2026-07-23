@@ -186,6 +186,21 @@ jsonlines = ">=4.0.0,<5.0.0"
 wandb = ">=0.18"
 
 # ---------------------------------------------------------------------------
+# leviz feature (delta over mlbase+ledata): inference-only visualization. Kept
+# OUT of `ledata` for the same reason as `letrain` — only the *-infer envs need
+# it and it should not perturb the training solves. Composed into `pi05-infer`
+# and `smolvla-infer` below.
+#   - rerun-sdk: the live control-loop viewer lerobot_rollout streams to when a
+#     config sets `display_data: true`. lerobot gates it behind its `viz` extra;
+#     we depend on rerun-sdk directly with lerobot's exact pin. Camera images +
+#     obs/action scalars render in a local Rerun window (needs a display; use
+#     `display_mode: foxglove` for a headless/browser viewer). See the
+#     configs/*_infer_real.yaml `display_data` knob.
+# ---------------------------------------------------------------------------
+[feature.leviz.pypi-dependencies]
+rerun-sdk = ">=0.24.0,<0.34.0"
+
+# ---------------------------------------------------------------------------
 # pi05 feature (delta over mlbase+ledata): pi0.5 (LoRA) policy. Migrated from
 # third_party/MCAP-DataLoader/setup_pi05_server.sh (the server-only hacks there —
 # pip mirror config, hf_xet/flash_attn/torchcodec uninstalls, numpy==1.26.4 pin —
@@ -368,6 +383,6 @@ ros = ["ros", "aao-core"]
 infer-airbot = ["mlbase", "ledata", "airbotpy", "airbot"]
 infer-aao = ["mlbase", "ledata", "aao-core", "aao"]
 pi05 = ["mlbase", "ledata", "letrain", "pi05"]
-pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05"]
+pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05", "leviz"]
 smolvla = ["mlbase", "ledata", "letrain", "smolvla"]
-smolvla-infer = ["mlbase", "ledata", "airbotpy", "airbot", "smolvla"]
+smolvla-infer = ["mlbase", "ledata", "airbotpy", "airbot", "smolvla", "leviz"]
