@@ -1,7 +1,8 @@
 # Example training config for LeRobot pi0.5 (VLA) with an MCAP dataset backend.
 #
 # Differences from the ACT config (configs/config.yaml):
-#   * policy.type is pi05, with chunk_size=50 (pi0.5's action horizon).
+#   * policy.path loads the pretrained pi05_base and LoRA-finetunes it (see the
+#     peft block); chunk_size=50 is pi0.5's action horizon.
 #   * pi0.5 is a vision-language-action policy, so every sample needs a language
 #     `task`. The MCAP adapter extracts it per-episode from a metadata record
 #     (see the `mcap.task_*` fields below). Nothing extra is needed if your MCAP
@@ -37,7 +38,7 @@ save_freq: 5000            # save a checkpoint every N steps (and after the last
 log_freq: 100              # print a training log line (loss, etc.) every N steps
 batch_size: 4              # samples per step (raise if VRAM allows)
 num_workers: 1             # data-loading worker processes (set 0 first if loading hangs)
-output_dir: outputs/train/my_pi05      # where outputs/logs/checkpoints are written
+output_dir: outputs/train/pi05      # where outputs/logs/checkpoints are written
 seed: 1000                 # random seed (same seed = reproducible run)
 # ----------------------------------------------------------------------------
 # Usually left as-is:

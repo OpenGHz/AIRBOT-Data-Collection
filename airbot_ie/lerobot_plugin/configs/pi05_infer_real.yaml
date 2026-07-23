@@ -57,7 +57,7 @@ robot:
       extra: { camera_index: "usb-0000:00:14.0-2" }
 
 policy:
-  path: outputs/train/my_pi05/checkpoints/last/pretrained_model
+  path: outputs/train/pi05/checkpoints/last/pretrained_model
 
 # ============================================================================
 # Common inference knobs — just edit the value after each key.

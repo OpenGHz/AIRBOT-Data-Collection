@@ -67,7 +67,7 @@ pixi run -e $POLICY $POLICY-check
 
    ```bash
    pixi run -e $POLICY mcap-lerobot-train -c .../${POLICY}_train.yaml \
-     --batch_size=8 --steps=20000 --output_dir=outputs/train/my_run
+     --batch_size=8 --steps=20000 --output_dir=outputs/train/run
    ```
 
 产物（含 checkpoint）默认写到 `outputs/train/<job>/checkpoints/<step>/pretrained_model/`。

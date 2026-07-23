@@ -48,7 +48,7 @@ save_freq: 5000            # save a checkpoint every N steps (and after the last
 log_freq: 100              # print a training log line (loss, etc.) every N steps
 batch_size: 4              # samples per step (8 GiB-friendly start; raise if VRAM allows)
 num_workers: 1             # data-loading worker processes (set 0 first if loading hangs)
-output_dir: outputs/train/my_smolvla   # where outputs/logs/checkpoints are written
+output_dir: outputs/train/smolvla   # where outputs/logs/checkpoints are written
 seed: 1000                 # random seed (same seed = reproducible run)
 # ----------------------------------------------------------------------------
 # Usually left as-is:

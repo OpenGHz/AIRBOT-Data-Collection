@@ -54,7 +54,7 @@ robot:
   mujoco_gl: glfw                 # has a display; headless: egl / osmesa
 
 policy:
-  path: outputs/train/my_run/checkpoints/last/pretrained_model
+  path: outputs/train/run/checkpoints/last/pretrained_model
 
 task: "place the blocks on the disk"   # same instruction used during data collection
 fps: 30
