@@ -36,7 +36,7 @@ env:
 steps: 20000               # total training steps (larger = longer; use ~100 for a smoke test)
 save_freq: 5000            # save a checkpoint every N steps (and after the last step)
 log_freq: 100              # print a training log line (loss, etc.) every N steps
-batch_size: 4              # samples per step (raise if VRAM allows)
+batch_size: 16  # openpi LoRA reaches ~24 on 24GB; start here, raise if stable
 num_workers: 1             # data-loading worker processes (set 0 first if loading hangs)
 output_dir: outputs/train/pi05      # where outputs/logs/checkpoints are written
 seed: 1000                 # random seed (same seed = reproducible run)
@@ -63,12 +63,33 @@ wandb:
   mode: offline              # offline = local, `wandb sync` to view; online = live dashboard
 
 policy:
-  type: pi05
+  # LoRA-finetune the pretrained pi0.5 base instead of training pi05 from scratch.
+  # `path` loads lerobot/pi05_base (from_pretrained); every other policy.* key below
+  # is applied as an override on top of that loaded config. No policy.type is needed —
+  # the type is read from the base checkpoint.
+  path: lerobot/pi05_base
   push_to_hub: false
-  chunk_size: 50          # pi0.5 action horizon
+  chunk_size: 50          # pi0.5 action horizon (matches the base; kept explicit)
   n_action_steps: 50      # steps to execute; must be <= chunk_size
-  # train_expert_only: true   # freeze the VLM backbone, train only the action expert
-  # freeze_vision_encoder: true
+  # Embodiment mismatch is absorbed the same way openpi does it: the base's heads are
+  # fixed at max_state_dim/max_action_dim = 32 (Linear(32,.)); lerobot pads our 8-dim
+  # state/action up to 32 (pad_vector) and masks the missing 3rd camera slot. So the
+  # pretrained 32-dim heads load 1:1 — do NOT lower max_*_dim or null the features.
+  dtype: bfloat16               # override the float32 default: most weights bf16 (VRAM)
+  gradient_checkpointing: true  # recompute activations: ~20-30% slower; drop if you raise batch_size and still fit
+  # optimizer_lr stays at the base default 2.5e-5 (~= openpi LoRA peak_lr 2e-5); raise toward 1e-4 if it converges slowly
+  # train_expert_only removed: the peft block already freezes the whole base and trains only LoRA adapters
+
+# LoRA / parameter-efficient finetune (top-level key, consumed by lerobot_train, not policy.*).
+# This block makes training wrap the loaded base with a fresh LoRA adapter
+# (policy.wrap_with_peft): the entire base is frozen, only adapters train. Leaving
+# target_modules unset uses pi0.5's built-in default (_get_default_peft_targets):
+# LoRA on the action expert's self-attn q/v + the state/action projections +
+# action-time MLPs; the PaliGemma VLM stays frozen.
+peft:
+  method_type: LORA
+  r: 16              # adapter rank (higher = more trainable params, closer to full FT)
+  lora_alpha: 16     # scaling = alpha/r = 1; set == r so a high rank isn't dampened (PEFT would otherwise default alpha=8)
 
 dataset:
   root: data
