@@ -94,7 +94,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/8a/d8/6ce2855fda8123ff7d127821743de7aa1609cda025183b9c4046d5b36205/linuxpy-0.24.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/55/d9/e3867222474f6c1b76e89f3bd914595af69f55bf2c1866e984c548afdc15/lz4-4.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b8/a9/6e73d68500f80773f65f0654ea932019d6694329a0eb0ed0533de38df376/numpy-2.5.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/cf/4c/c73f828fdbcd37eaf21d08fa852544a3ca7c2dbb3ea76873d64f2ea413d1/opencv_python-5.0.0.93-cp37-abi3-manylinux_2_28_x86_64.whl
@@ -223,7 +223,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/8a/d8/6ce2855fda8123ff7d127821743de7aa1609cda025183b9c4046d5b36205/linuxpy-0.24.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/55/d9/e3867222474f6c1b76e89f3bd914595af69f55bf2c1866e984c548afdc15/lz4-4.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/c3/11/c69199e4123935f98068ab6ab6b35955b4de0f6a91d3f9883805a5789394/mujoco-3.10.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b8/a9/6e73d68500f80773f65f0654ea932019d6694329a0eb0ed0533de38df376/numpy-2.5.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -365,7 +365,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
@@ -516,7 +516,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/59/91/aa6bde563e0085a02a435aa99b49ef75b0a4b062635e606dab23ce18d720/inflection-0.5.1-py2.py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/f1/01/d52c7b11eaa286d49dae619c0eec4aabc0bf3cda7a7467eb77c62c4471f3/lz4-4.4.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/41/5f/0f992cb24560673496c5d68de61913b57166ce530ffda07c1f280e0cc464/numpy-2.5.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/fd/7b/122376b1fd3c62c1ed9dc80c931ace4844b3c55407b6fb2d199377c9736f/pydantic-2.13.4-py3-none-any.whl
@@ -652,7 +652,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/55/d9/e3867222474f6c1b76e89f3bd914595af69f55bf2c1866e984c548afdc15/lz4-4.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
@@ -831,7 +831,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/55/d9/e3867222474f6c1b76e89f3bd914595af69f55bf2c1866e984c548afdc15/lz4-4.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
@@ -1007,7 +1007,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
@@ -1197,7 +1197,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
@@ -1612,7 +1612,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/82/3d/14ce75ef66813643812f3093ab17e46d3a206942ce7376d31ec2d36229e7/lark-1.3.1-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/55/d9/e3867222474f6c1b76e89f3bd914595af69f55bf2c1866e984c548afdc15/lz4-4.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e4/8d/8f844a2b6c551a055e3effb4d891c3a88f712e75e0c3848e71cc8c48a441/mcap_ros2idl_support-0.1.3-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/c3/11/c69199e4123935f98068ab6ab6b35955b4de0f6a91d3f9883805a5789394/mujoco-3.10.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -1754,7 +1754,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
@@ -1944,7 +1944,7 @@ environments:
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl
-      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+      - pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://mirrors.ustc.edu.cn/pypi/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl
@@ -2162,7 +2162,7 @@ packages:
 - pypi: ./
   name: airdc
   version: 0.7.8
-  sha256: 6bc0d32716848dff414d1a4ee45848f06ba6c68b437828871c708621b60dd150
+  sha256: d10670e9d47bdbb1a623354e5e959811479a1cab935af742c618dcffe9b265ce
   requires_dist:
   - cfgable
   - pydantic
@@ -2170,7 +2170,7 @@ packages:
   - more-itertools
   - typing-extensions
   - setproctitle
-  - mcap-data-loader==0.3.4
+  - mcap-data-loader==0.3.5
   - ruamel-yaml ; extra == 'airbot'
   - opencv-python ; extra == 'cv2'
   - fastapi ; extra == 'web'
@@ -4541,10 +4541,10 @@ packages:
   - lz4
   - zstandard
   requires_python: '>=3.7'
-- pypi: https://mirrors.ustc.edu.cn/pypi/packages/5e/76/d173b7f99a70540430a08aced186b9f0d5cdd31279d5587fc7e2bbc9d44e/mcap_data_loader-0.3.4-py3-none-any.whl
+- pypi: https://mirrors.ustc.edu.cn/pypi/packages/51/96/9ff92b26b31e073e483822547de58ef248865f472d78d5718bccf1241665/mcap_data_loader-0.3.5-py3-none-any.whl
   name: mcap-data-loader
-  version: 0.3.4
-  sha256: 0c890595405c4061793fc478dc12d0a685019264a35dfbf1d37ca8fc9d705780
+  version: 0.3.5
+  sha256: f141a110be8fc2d75cd321706372759a10688d6bfb741c60ef71071738a3240b
   requires_dist:
   - cfgable[cli,hydra]
   - pydantic-yaml
