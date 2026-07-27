@@ -30,8 +30,22 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
     _IDENTITY_QUAT = np.array([0, 0, 0, 1], dtype=np.float32)
     _IDENTITY_ROT6D = np.array([1, 0, 0, 0, 1, 0], dtype=np.float32)
 
+    # Per-topic dispatch kinds. A topic's string + schema type fully determine
+    # which branch it takes, so the kind is computed once (see _plan_for_topic)
+    # and cached, turning per-message handling into a dict lookup instead of a
+    # chain of endswith() calls and string concatenations.
+    _KIND_PASSTHROUGH = 0  # write original only, no relative data
+    _KIND_SOURCE_RELA = 1  # a source-provided "_rela" topic (first-writer-wins)
+    _KIND_POSITION = 2
+    _KIND_ORIENTATION = 3
+    _KIND_ROT6D = 4
+
     def __init__(self, initial_builder_size: int = 1024):
         super().__init__(initial_builder_size)
+        # Static topic -> dispatch plan cache. A plan is fully determined by the
+        # topic name and schema type, both stable across episodes, so this cache
+        # is built once per topic and never reset (unlike the reference frames).
+        self._topic_plan = {}
         self.reset_references()
 
     def reset_references(self) -> None:
@@ -50,34 +64,90 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
         super().unset_writer(finish)
         self.reset_references()
 
+    def _plan_for_topic(self, schema_type, topic: str):
+        """Classify a topic once and cache the result.
+
+        Returns a tuple ``(kind, rela_topic, rot6d_topic, rot6d_rela_topic)``.
+        The trailing names are pre-concatenated here so the per-message hot path
+        never builds strings or scans suffixes again.
+        """
+        # Non-float-array messages never carry relative data. Handle them without
+        # touching the cache: the cache is keyed by topic only, and a topic's
+        # relative-data classification depends purely on its name suffix, so the
+        # cache must not be seeded from a (possibly differently-typed) message.
+        if schema_type is not FlatBuffersSchemas.FLOAT_ARRAY:
+            return (self._KIND_PASSTHROUGH, None, None, None)
+
+        plan = self._topic_plan.get(topic)
+        if plan is not None:
+            return plan
+
+        if topic.endswith("_rela"):
+            plan = (self._KIND_SOURCE_RELA, None, None, None)
+        elif topic.endswith("position"):
+            plan = (self._KIND_POSITION, topic + "_rela", None, None)
+        elif topic.endswith("orientation"):
+            # Derived rot6d topic naming: "foo/bar/orientation" -> "foo/bar/rotation_6d"
+            if topic.endswith("/orientation"):
+                rot6d_topic = topic[: -len("/orientation")] + "/rotation_6d"
+            else:
+                rot6d_topic = topic[: -len("orientation")] + "rotation_6d"
+            plan = (
+                self._KIND_ORIENTATION,
+                topic + "_rela",
+                rot6d_topic,
+                rot6d_topic + "_rela",
+            )
+        elif topic.endswith("rotation_6d"):
+            plan = (self._KIND_ROT6D, topic + "_rela", None, None)
+        else:
+            plan = (self._KIND_PASSTHROUGH, None, None, None)
+
+        self._topic_plan[topic] = plan
+        return plan
+
     def add_message(
         self, schema_type, topic: str, data, publish_time: int, log_time: int, **kwargs
     ):
-        # A source-provided "_rela" topic: honor first-writer-wins so it does
-        # not collide with an auto-generated one of the same name.
-        if schema_type is FlatBuffersSchemas.FLOAT_ARRAY and topic.endswith("_rela"):
+        kind, rela_topic, rot6d_topic, rot6d_rela_topic = self._plan_for_topic(
+            schema_type, topic
+        )
+
+        # Source topics whose name may collide with an auto-generated one
+        # (a "_rela" stream, or a "rotation_6d" that could instead be derived
+        # from orientation) are written only if they claim the name first.
+        # Everything else is always written up front.
+        if kind == self._KIND_SOURCE_RELA:
             if self._rela_owner.setdefault(topic, "source") == "source":
                 super().add_message(
                     schema_type, topic, data, publish_time, log_time, **kwargs
                 )
             return
 
-        # Write the original message first (super() also auto-registers its channel).
-        super().add_message(schema_type, topic, data, publish_time, log_time, **kwargs)
+        if kind == self._KIND_ROT6D:
+            if self._rela_owner.setdefault(topic, "source") != "source":
+                return  # A derived rotation_6d already claimed this topic; skip.
+            super().add_message(
+                schema_type, topic, data, publish_time, log_time, **kwargs
+            )
+        else:
+            # Write the original message first (super() also auto-registers its channel).
+            super().add_message(
+                schema_type, topic, data, publish_time, log_time, **kwargs
+            )
 
-        if schema_type is not FlatBuffersSchemas.FLOAT_ARRAY:
-            return  # Only float arrays carry position/orientation/rot6d data
+        if kind == self._KIND_PASSTHROUGH:
+            return  # Not a float array carrying position/orientation/rot6d data
 
         arr = np.asarray(data, dtype=np.float32)
 
-        if topic.endswith("position"):
+        if kind == self._KIND_POSITION:
             if topic not in self._position_refs:
                 self._position_refs[topic] = arr
                 rela = np.zeros_like(arr)
             else:
                 rela = arr - self._position_refs[topic]
 
-            rela_topic = topic + "_rela"
             if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
                 super().add_message(
                     FlatBuffersSchemas.FLOAT_ARRAY,
@@ -87,7 +157,7 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
                     log_time,
                 )
 
-        elif topic.endswith("orientation"):
+        elif kind == self._KIND_ORIENTATION:
             if topic not in self._orientation_refs:
                 self._orientation_refs[topic] = arr
                 rela = self._IDENTITY_QUAT
@@ -97,7 +167,6 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
                 )
 
             # Write orientation_rela
-            rela_topic = topic + "_rela"
             if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
                 super().add_message(
                     FlatBuffersSchemas.FLOAT_ARRAY,
@@ -107,16 +176,9 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
                     log_time,
                 )
 
-            # Derive rotation_6d from orientation (if not already present)
-            # Topic naming: "foo/bar/orientation" -> "foo/bar/rotation_6d"
-            if topic.endswith("/orientation"):
-                rot6d_topic = topic[: -len("/orientation")] + "/rotation_6d"
-            else:
-                rot6d_topic = topic[: -len("orientation")] + "rotation_6d"
-
-            # Only derive if no source rot6d claimed this topic yet (first-writer-wins)
+            # Derive rotation_6d from orientation, unless a source rot6d claimed
+            # this topic first (first-writer-wins).
             if self._rela_owner.setdefault(rot6d_topic, "auto") == "auto":
-                # Derive rot6d from the current orientation
                 rot6d_arr = Rotation6D.quat_to_rot6d(arr)
                 super().add_message(
                     FlatBuffersSchemas.FLOAT_ARRAY,
@@ -127,7 +189,6 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
                 )
 
                 # Derive rot6d_rela from orientation_rela (equivalent to to_rela_rot6d per regression)
-                rot6d_rela_topic = rot6d_topic + "_rela"
                 if self._rela_owner.setdefault(rot6d_rela_topic, "auto") == "auto":
                     rot6d_rela_arr = Rotation6D.quat_to_rot6d(rela)
                     super().add_message(
@@ -138,17 +199,15 @@ class _RelativeFlbWriter(McapFlatBuffersWriter):
                         log_time,
                     )
 
-        elif topic.endswith("rotation_6d"):
-            # Mark this topic as claimed by source data (not derived)
-            self._rela_owner.setdefault(topic, "source")
-
+        elif kind == self._KIND_ROT6D:
+            # Ownership of this topic was already claimed "source" by the gate
+            # above (which skips the frame entirely if a derived rot6d won).
             if topic not in self._rot6d_refs:
                 self._rot6d_refs[topic] = arr
                 rela = self._IDENTITY_ROT6D
             else:
                 rela = PoseGlobalRelaAbsTool.to_rela_rot6d(arr, self._rot6d_refs[topic])
 
-            rela_topic = topic + "_rela"
             if self._rela_owner.setdefault(rela_topic, "auto") == "auto":
                 super().add_message(
                     FlatBuffersSchemas.FLOAT_ARRAY,
