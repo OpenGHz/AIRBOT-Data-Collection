@@ -97,6 +97,7 @@ platforms = ["linux-64"]
 python = ">=3.12,<3.13"
 setuptools = ">=71.0.0,<81"
 packaging = ">=24.2,<26"
+tqdm = ">=4.0"
 
 [feature.mlbase.pypi-dependencies]
 # torch/torchvision are NOT listed as direct deps: lerobot (below) is a PyTorch
@@ -277,6 +278,16 @@ env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
 cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2words; from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('SMOLVLA SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| transformers', transformers.__version__)" """
 
 # ---------------------------------------------------------------------------
+# act feature: ACT (Action Chunking with Transformers) is included in the base
+# lerobot package, so no extra dependencies are needed. Only the self-check task
+# is defined here. Training/inference envs are `act` and `act-infer` below.
+# ---------------------------------------------------------------------------
+[feature.act.tasks.act-check]
+description = "Offline self-check: import the ACT training stack and report versions"
+env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
+cmd = """python -c "import torch, cv2, hydra, datasets, av; from lerobot.policies.act.modeling_act import ACTPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('ACT SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__)" """
+
+# ---------------------------------------------------------------------------
 # collect feature: the data-collection environment. This is the pixi equivalent
 # of `bash install/install.sh` (system deps + `pip install -e .[all,airbot]`):
 #   - airdc[all,airbot] editable = the full data-collection stack (basic/cfg/soft/
@@ -338,6 +349,9 @@ auto-atomic-operation = { path = "third_party/auto-atomic-operation", extras = [
 [feature.aao.pypi-dependencies]
 # Editable so `--robot.type=aao_sim` is discoverable.
 lerobot_robot_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_robot_aao_sim", editable = true }
+# Editable so `--env.type=aao_sim` is discoverable by `lerobot-eval` (gym env for
+# native success-rate evaluation). LeRobot auto-discovers `lerobot_env_*` dists.
+lerobot_env_aao_sim = { path = "airbot_ie/lerobot_plugin/lerobot_env_aao_sim", editable = true }
 
 # ---------------------------------------------------------------------------
 # Environments (mlbase = shared torch + lerobot base; ledata = shared dataset
@@ -386,3 +400,5 @@ pi05 = ["mlbase", "ledata", "letrain", "pi05"]
 pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05", "leviz"]
 smolvla = ["mlbase", "ledata", "letrain", "smolvla"]
 smolvla-infer = ["mlbase", "ledata", "airbotpy", "airbot", "smolvla", "leviz"]
+act = ["mlbase", "ledata", "letrain", "act"]
+act-infer = ["mlbase", "ledata", "airbotpy", "airbot", "act"]

@@ -1,0 +1,36 @@
+# ACT inference on MOCK AIRBOT Play arm (no hardware needed).
+#
+# Uses pose control mode with arm + eef components:
+#   observation.state = eef pos(3) + quat(4) + gripper(1) = (8,)
+#   action            = target eef pos(3) + quat(4) + gripper(1) = (8,)
+#
+# Run:
+#   pixi run -e act-infer mcap-lerobot-infer -c airbot_ie/lerobot_plugin/configs/act_infer_mock.yaml
+
+preserve_keys: [cameras]
+
+robot:
+  type: airbot_play
+  mock: true
+  control_mode: pose
+  components: [arm, eef]       # observation.state (8,): eef pos+quat+gripper
+  cameras:
+    eef_wrist_cam:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 640
+      height: 352
+      fps: 30
+      extra: { random: true }
+    env1_cam:
+      target: airdc.common.devices.cameras.mock.MockCamera
+      width: 640
+      height: 352
+      fps: 30
+      extra: { random: true }
+
+policy:
+  path: outputs/train/my_act/checkpoints/last/pretrained_model
+
+task: "open the door"
+fps: 30
+duration: 3
