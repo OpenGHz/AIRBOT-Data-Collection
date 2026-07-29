@@ -45,3 +45,74 @@ Outputs: `outputs/eval/<run>/videos/*.mp4` + `metrics.json` with `pc_success`.
 
 Action is always 8-dim quaternion (pos3 + quat4 + grip1), regardless of
 `observation_rotation`, because `apply_pose_action` consumes quaternions.
+
+## rot6d convention conversion
+
+When `observation_rotation=rot6d`, the simulator natively emits **row-major**
+rot6d (`rot9d[:6]` = first 2 rows of R).  Policies trained on **real-robot**
+data expect **column-major** rot6d (first 2 columns of R, produced by
+`Rotation6D.quat_to_rot6d()`).  Two config flags bridge this gap:
+
+### `obs_convention` — what the policy *receives*
+
+| Value | Effect | Use when |
+|---|---|---|
+| `sim` (default) | No conversion; policy sees row-major obs | checkpoint trained on **sim** data |
+| `real` | Sim obs converted to col-major before policy | checkpoint trained on **real-robot** data |
+
+### `action_convention` — what the policy *outputs* (only for `action_rotation=rot6d`)
+
+| Value | Effect | Use when |
+|---|---|---|
+| `real` (default) | No conversion; `rot6d_to_quat()` receives col-major directly | checkpoint outputs col-major rot6d action |
+| `sim` | Action converted from row-major to col-major before `step()` | checkpoint outputs row-major rot6d action |
+
+> `action_convention` has no effect when `action_rotation=quat` (the default).
+
+### Quick-reference: which flags to set
+
+| Checkpoint origin | `obs_convention` | `action_rotation` | `action_convention` |
+|---|---|---|---|
+| Real-robot data, **quat** action *(e.g. absolute_random_wrist)* | `real` | `quat` (default) | — |
+| Real-robot data, **rot6d** action | `real` | `rot6d` | `real` (default) |
+| Sim data, **quat** action | `sim` (default) | `quat` (default) | — |
+| Sim data, **rot6d** action | `sim` (default) | `rot6d` | `sim` |
+
+### Example — ACT checkpoint trained on real data, quat action
+
+```bash
+pixi run -e infer-aao lerobot-eval \
+  --policy.path=models_open_door/absolute_random_wrist/pretrained_model \
+  --env.type=aao_sim \
+  --env.task_config=open_door \
+  --env.observation_rotation=rot6d \
+  --env.obs_convention=real \
+  --eval.n_episodes=10 \
+  --eval.batch_size=1 \
+  --policy.device=cuda
+```
+
+### Example — ACT checkpoint trained on sim data, quat action
+
+```bash
+pixi run -e infer-aao lerobot-eval \
+  --policy.path=models_open_door/absolute_random_wrist/pretrained_model \
+  --env.type=aao_sim \
+  --env.task_config=open_door \
+  --env.observation_rotation=rot6d \
+  --eval.n_episodes=10 \
+  --eval.batch_size=1 \
+  --policy.device=cuda
+```
+
+*(no `--env.obs_convention` needed; default `sim` passes obs through unchanged)*
+
+### How to tell which convention your checkpoint uses
+
+If you are unsure: run both and compare `pc_success`.  A policy receiving the
+wrong convention will produce erratic, near-zero success even if inference
+runs without errors.
+
+Alternatively, check the MCAP training data source:
+- Data recorded on the **real robot** → col-major (`obs_convention=real`)
+- Data recorded from the **simulator** → row-major (`obs_convention=sim`)
