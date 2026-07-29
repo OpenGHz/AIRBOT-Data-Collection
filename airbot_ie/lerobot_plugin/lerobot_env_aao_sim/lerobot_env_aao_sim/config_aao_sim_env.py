@@ -56,11 +56,42 @@ class AAOSimEnvConfig(EnvConfig):
     has_gripper: bool = True
     """Whether to read/write a gripper DoF."""
 
-    # --- observation ---
+    # --- pose representation ---
     observation_rotation: str = "rot6d"
     """Rotation representation in observation.state.
     'rot6d': pos(3)+rot6d(6)+grip(1) = 10-dim (matches absolute_random_wrist ckpt).
-    'quat':  pos(3)+quat(4)+grip(1)  = 8-dim."""
+    'quat':  pos(3)+quat(4)+grip(1)  = 8-dim.
+    Read directly from the sim's native rotation_6d topic (row-major rot9d[:6]),
+    matching the training data format (sampler_flb preserves the sim topic as-is)."""
+
+    action_rotation: str = "quat"
+    """Rotation representation expected in the action vector.
+    'quat':  pos(3)+quat(4)+grip(1)  = 8-dim  (default; ACT absolute ckpt).
+    'rot6d': pos(3)+rot6d(6)+grip(1) = 10-dim (for future rot6d-action ckpts).
+    rot6d actions are converted back to quaternion via Rotation6D.rot6d_to_quat()
+    before being passed to apply_pose_action()."""
+
+    relative_pose: bool = False
+    """Whether observations and actions use episode-relative coordinates.
+    When True, position/orientation are relative to the episode-start pose,
+    matching the _rela topics in MCAP training data."""
+
+    obs_convention: str = "sim"
+    """rot6d convention of the *policy* (determines whether to convert obs).
+    'sim'  (default) : no conversion; observation is row-major [r00,r01,r02,r10,r11,r12]
+                       as emitted by the simulator (use for policies trained on sim data).
+    'real'           : convert sim obs to column-major [r00,r10,r20,r01,r11,r21]
+                       (use for policies trained on real-robot data).
+    Only takes effect when observation_rotation='rot6d'."""
+
+    action_convention: str = "real"
+    """rot6d convention that the *policy* outputs in its actions (determines
+    whether to convert actions before step()).
+    'real' (default) : no conversion; policy outputs column-major rot6d, matching
+                       the Rotation6D.rot6d_to_quat() expectation in aao_sim_env.
+    'sim'            : policy outputs row-major rot6d (sim convention); convert
+                       to column-major before forwarding to aao_sim_env.step().
+    Only takes effect when action_rotation='rot6d'."""
 
     # --- success detection ---
     success_object: str = "handle_body_phys"
@@ -88,16 +119,18 @@ class AAOSimEnvConfig(EnvConfig):
     task_description: str = "complete the task"
 
     def __post_init__(self) -> None:
-        rot_dim   = 6 if self.observation_rotation == "rot6d" else 4
-        grip_dim  = 1 if self.has_gripper else 0
-        state_dim = 3 + rot_dim + grip_dim
-        H, W, C   = self.camera_shape
+        obs_rot_dim = 6 if self.observation_rotation == "rot6d" else 4
+        act_rot_dim = 6 if self.action_rotation      == "rot6d" else 4
+        grip_dim    = 1 if self.has_gripper else 0
+        state_dim   = 3 + obs_rot_dim + grip_dim
+        action_dim  = 3 + act_rot_dim + grip_dim
+        H, W, C     = self.camera_shape
 
         # features: PolicyFeature objects as expected by lerobot's env_to_policy_features.
         # Image shapes use HWC convention here; env_to_policy_features converts to CHW.
         self.features: Dict[str, Any] = {
-            "agent_pos": PolicyFeature(type=FeatureType.STATE, shape=(state_dim,)),
-            ACTION:      PolicyFeature(type=FeatureType.ACTION, shape=(8,)),
+            "agent_pos": PolicyFeature(type=FeatureType.STATE,  shape=(state_dim,)),
+            ACTION:      PolicyFeature(type=FeatureType.ACTION, shape=(action_dim,)),
             **{
                 f"pixels/{k}": PolicyFeature(type=FeatureType.VISUAL, shape=(H, W, C))
                 for k in self.sim_cameras
@@ -127,6 +160,8 @@ class AAOSimEnvConfig(EnvConfig):
             task_config=self.task_config,
             operator=self.operator,
             observation_rotation=self.observation_rotation,
+            action_rotation=self.action_rotation,
+            relative_pose=self.relative_pose,
             substeps=self.substeps,
             kinematic=self.kinematic,
             has_gripper=self.has_gripper,
@@ -151,8 +186,19 @@ class AAOSimEnvConfig(EnvConfig):
                 # Force NVIDIA EGL device; avoids Mesa software fallback (0x8cdd)
                 os.environ.setdefault("MUJOCO_EGL_DEVICE_ID", "0")
 
+        from functools import partial
         VecEnv = AsyncVectorEnv if use_async_envs else SyncVectorEnv
-        # Use default-arg capture to avoid late-binding closure issues.
-        fns = [(lambda kw=kwargs: AAOSimEnv(**kw)) for _ in range(n_envs)]
+        fns = [partial(AAOSimEnv, **kwargs) for _ in range(n_envs)]
+
+        # Wrap each env for rot6d convention conversion when needed.
+        # The conversion is self-inverse, so no direction param is required.
+        if self.obs_convention == "real" and self.observation_rotation == "rot6d":
+            from .convention_wrapper import Rot6dObsWrapper
+            fns = [lambda fn=fn: Rot6dObsWrapper(fn()) for fn in fns]
+
+        if self.action_convention == "sim" and self.action_rotation == "rot6d":
+            from .convention_wrapper import Rot6dActionWrapper
+            fns = [lambda fn=fn: Rot6dActionWrapper(fn()) for fn in fns]
+
         vec = VecEnv(fns)
         return {self.type: {0: vec}}
