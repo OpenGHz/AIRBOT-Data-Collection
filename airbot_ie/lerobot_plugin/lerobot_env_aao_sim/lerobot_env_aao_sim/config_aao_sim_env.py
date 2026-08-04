@@ -61,8 +61,8 @@ class AAOSimEnvConfig(EnvConfig):
     """Rotation representation in observation.state.
     'rot6d': pos(3)+rot6d(6)+grip(1) = 10-dim (matches absolute_random_wrist ckpt).
     'quat':  pos(3)+quat(4)+grip(1)  = 8-dim.
-    Read directly from the sim's native rotation_6d topic (row-major rot9d[:6]),
-    matching the training data format (sampler_flb preserves the sim topic as-is)."""
+    Sim now writes rotation_6d as column-major (first 2 columns of rotation matrix),
+    matching the real-robot convention produced by Rotation6D.quat_to_rot6d()."""
 
     action_rotation: str = "quat"
     """Rotation representation expected in the action vector.
@@ -75,23 +75,6 @@ class AAOSimEnvConfig(EnvConfig):
     """Whether observations and actions use episode-relative coordinates.
     When True, position/orientation are relative to the episode-start pose,
     matching the _rela topics in MCAP training data."""
-
-    obs_convention: str = "sim"
-    """rot6d convention of the *policy* (determines whether to convert obs).
-    'sim'  (default) : no conversion; observation is row-major [r00,r01,r02,r10,r11,r12]
-                       as emitted by the simulator (use for policies trained on sim data).
-    'real'           : convert sim obs to column-major [r00,r10,r20,r01,r11,r21]
-                       (use for policies trained on real-robot data).
-    Only takes effect when observation_rotation='rot6d'."""
-
-    action_convention: str = "real"
-    """rot6d convention that the *policy* outputs in its actions (determines
-    whether to convert actions before step()).
-    'real' (default) : no conversion; policy outputs column-major rot6d, matching
-                       the Rotation6D.rot6d_to_quat() expectation in aao_sim_env.
-    'sim'            : policy outputs row-major rot6d (sim convention); convert
-                       to column-major before forwarding to aao_sim_env.step().
-    Only takes effect when action_rotation='rot6d'."""
 
     # --- success detection ---
     success_object: str = "handle_body_phys"
@@ -189,16 +172,6 @@ class AAOSimEnvConfig(EnvConfig):
         from functools import partial
         VecEnv = AsyncVectorEnv if use_async_envs else SyncVectorEnv
         fns = [partial(AAOSimEnv, **kwargs) for _ in range(n_envs)]
-
-        # Wrap each env for rot6d convention conversion when needed.
-        # The conversion is self-inverse, so no direction param is required.
-        if self.obs_convention == "real" and self.observation_rotation == "rot6d":
-            from .convention_wrapper import Rot6dObsWrapper
-            fns = [lambda fn=fn: Rot6dObsWrapper(fn()) for fn in fns]
-
-        if self.action_convention == "sim" and self.action_rotation == "rot6d":
-            from .convention_wrapper import Rot6dActionWrapper
-            fns = [lambda fn=fn: Rot6dActionWrapper(fn()) for fn in fns]
 
         vec = VecEnv(fns)
         return {self.type: {0: vec}}

@@ -22,7 +22,11 @@ from gymnasium import spaces
 _POSE_POS   = "{op}/pose/position"
 _POSE_ORI   = "{op}/pose/orientation"
 _POSE_ROT6D = "{op}/pose/rotation_6d"   # native 6-D rotation emitted by sim
-_EEF_JS     = "eef/joint_state/position"
+# Gripper joint. The mocap gripper operator sets eef_output_name=gripper
+# (aao_configs/basis_mocap_eef.yaml), so the sim emits `gripper/joint_state/
+# position` — matching the MCAP topic used in training. (Was `eef/...`, which
+# does not exist, so the gripper silently read 0.0 at inference.)
+_EEF_JS     = "gripper/joint_state/position"
 _CAM_COLOR  = "{cam}/color/image_raw"
 
 
@@ -50,6 +54,79 @@ def _as_quat(data: Any) -> List[float]:
     return _as_flat(data, 4)
 
 
+def _rot6d_to_quat(rot6d: np.ndarray) -> np.ndarray:
+    """Convert column-major rot6d (first 2 matrix columns) to xyzw quaternion.
+
+    This mirrors ``mcap_data_loader.utils.rot6d.Rotation6D.rot6d_to_quat`` but
+    avoids its NumPy-2-incompatible ``np.array(..., copy=False)`` path.
+    """
+    v = np.asarray(rot6d, dtype=np.float64).reshape(6)
+    a1, a2 = v[:3], v[3:6]
+
+    n1 = np.linalg.norm(a1)
+    b1 = a1 / (n1 if n1 > 1e-12 else 1.0)
+    a2 = a2 - np.dot(b1, a2) * b1
+    n2 = np.linalg.norm(a2)
+    if n2 <= 1e-12:
+        # Degenerate policy output: pick a stable vector perpendicular to b1.
+        basis = np.array([1.0, 0.0, 0.0])
+        if abs(np.dot(b1, basis)) > 0.9:
+            basis = np.array([0.0, 1.0, 0.0])
+        a2 = basis - np.dot(b1, basis) * b1
+        n2 = np.linalg.norm(a2)
+    b2 = a2 / n2
+    b3 = np.cross(b1, b2)
+    m = np.stack((b1, b2, b3), axis=1)
+
+    tr = float(np.trace(m))
+    if tr > 0.0:
+        s = np.sqrt(tr + 1.0) * 2.0
+        q = np.array(
+            [
+                (m[2, 1] - m[1, 2]) / s,
+                (m[0, 2] - m[2, 0]) / s,
+                (m[1, 0] - m[0, 1]) / s,
+                0.25 * s,
+            ],
+            dtype=np.float32,
+        )
+    elif m[0, 0] > m[1, 1] and m[0, 0] > m[2, 2]:
+        s = np.sqrt(1.0 + m[0, 0] - m[1, 1] - m[2, 2]) * 2.0
+        q = np.array(
+            [
+                0.25 * s,
+                (m[0, 1] + m[1, 0]) / s,
+                (m[0, 2] + m[2, 0]) / s,
+                (m[2, 1] - m[1, 2]) / s,
+            ],
+            dtype=np.float32,
+        )
+    elif m[1, 1] > m[2, 2]:
+        s = np.sqrt(1.0 + m[1, 1] - m[0, 0] - m[2, 2]) * 2.0
+        q = np.array(
+            [
+                (m[0, 1] + m[1, 0]) / s,
+                0.25 * s,
+                (m[1, 2] + m[2, 1]) / s,
+                (m[0, 2] - m[2, 0]) / s,
+            ],
+            dtype=np.float32,
+        )
+    else:
+        s = np.sqrt(1.0 + m[2, 2] - m[0, 0] - m[1, 1]) * 2.0
+        q = np.array(
+            [
+                (m[0, 2] + m[2, 0]) / s,
+                (m[1, 2] + m[2, 1]) / s,
+                0.25 * s,
+                (m[1, 0] - m[0, 1]) / s,
+            ],
+            dtype=np.float32,
+        )
+    q /= max(np.linalg.norm(q), 1e-12)
+    return q
+
+
 class AAOSimEnv(gym.Env):
     """gymnasium.Env over a single AAO MuJoCo episode.
 
@@ -63,15 +140,14 @@ class AAOSimEnv(gym.Env):
     Rotation convention (observation)
     ----------------------------------
     When ``observation_rotation="rot6d"`` the rotation is read directly from
-    the sim's ``{op}/pose/rotation_6d`` topic, which emits row-major
-    ``rot9d[:6]`` = [r00,r01,r02, r10,r11,r12].  Training data also contains
-    this format because ``sampler_flb._RelativeFlbWriter`` applies
-    first-writer-wins semantics: if the sim already wrote the topic, the
-    writer leaves it untouched and does NOT re-derive it from orientation.
-    Therefore the observation MUST be read from the sim topic directly — never
-    re-computed via ``Rotation6D.quat_to_rot6d()`` (which outputs column-major
-    [r00,r10,r20, r01,r11,r21]), or the obs distribution will diverge from
-    training data and the policy will fail.
+    the sim's ``{op}/pose/rotation_6d`` topic, which emits **column-major**
+    ``[r00,r10,r20, r01,r11,r21]`` (first 2 columns of R).  This matches the
+    real-robot convention produced by ``Rotation6D.quat_to_rot6d()``.
+    ``mujoco_env.py`` writes ``rot9d.reshape(3,3).T.ravel()[:6]`` to achieve
+    this.  ``sampler_flb._RelativeFlbWriter`` preserves the topic as-is
+    (first-writer-wins), so MCAP files contain the same column-major value.
+    Reading from the topic directly (not re-computing) is correct and keeps
+    sim/real distributions aligned.
 
     Action
     ------
@@ -276,8 +352,7 @@ class AAOSimEnv(gym.Env):
             # Convert column-major rot6d action back to quaternion.
             # Future checkpoints trained with rot6d actions are expected to use
             # Rotation6D.quat_to_rot6d() (column-major) for their action space.
-            self._ensure_utils()
-            quat    = self._Rot6D.rot6d_to_quat(action[3:9]).astype(np.float32)
+            quat    = _rot6d_to_quat(action[3:9])
             gripper = action[9:10].astype(np.float32) if self._has_gripper else None
         else:
             quat    = action[3:7].astype(np.float32)
@@ -338,21 +413,24 @@ class AAOSimEnv(gym.Env):
 
         if self._observation_rotation == "rot6d":
             if not self._relative_pose:
-                # Read sim's native rotation_6d topic directly (row-major rot9d[:6]).
-                # This MUST match training data: sampler_flb._RelativeFlbWriter uses
-                # first-writer-wins, so the sim-provided topic is kept as-is and the
-                # MCAP contains the same row-major format.  Do NOT re-compute via
-                # Rotation6D.quat_to_rot6d() (column-major) or obs will diverge.
+                # Read sim's native rotation_6d topic directly (column-major: first
+                # 2 columns of R, i.e. [r00,r10,r20, r01,r11,r21]).
+                # mujoco_env.py writes rot9d.reshape(3,3).T.ravel()[:6], which equals
+                # column-major — identical to Rotation6D.quat_to_rot6d() used by the
+                # real robot sampler.  sampler_flb._RelativeFlbWriter uses first-writer-
+                # wins, so the MCAP preserves this column-major value unmodified.
+                # Reading from the topic directly (no re-computation) is correct and
+                # keeps obs/training distributions aligned.
                 rot = np.array(_as_flat(raw[self._pose_rot6d_key]["data"], 6))
             else:
                 # Relative rot6d: compute from quaternion so PoseGlobalRelaAbsTool
-                # can be used, then re-encode in the same row-major format as the
-                # sim's native topic (quaternion_matrix(q)[:3,:3].flatten()[:6]).
+                # can be used, then encode the first two matrix columns, matching
+                # the unified absolute-observation and MCAP convention.
                 self._ensure_utils()
                 quat     = np.array(_as_quat(raw[self._pose_ori_key]["data"]))
                 rela_q   = self._Rela.to_rela_orientation(quat, self._ref_quat)
                 R        = self._quat_mat(rela_q)[:3, :3]
-                rot      = R.flatten()[:6]
+                rot      = np.concatenate((R[:, 0], R[:, 1]))
                 pos      = self._Rela.to_rela_position(pos, self._ref_pos)
         else:  # quat
             quat = np.array(_as_quat(raw[self._pose_ori_key]["data"]))
