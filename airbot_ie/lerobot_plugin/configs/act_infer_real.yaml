@@ -1,0 +1,39 @@
+# ACT inference on REAL AIRBOT Play arm.
+#
+# Before running: update `url` and camera `camera_index` values for your setup.
+# Uses pose control mode with arm + eef components:
+#   observation.state = eef pos(3) + quat(4) + gripper(1) = (8,)
+#   action            = target eef pos(3) + quat(4) + gripper(1) = (8,)
+#
+# Run:
+#   pixi run -e act-infer mcap-lerobot-infer -c airbot_ie/lerobot_plugin/configs/act_infer_real.yaml
+
+preserve_keys: [cameras]
+
+robot:
+  type: airbot_play
+  control_mode: pose
+  components: [arm, eef]       # observation.state (8,): eef pos+quat+gripper
+  url: localhost               # ← change to arm's IP if remote
+  port: 50051
+  return_to_initial_position: true
+  cameras:
+    eef_wrist_cam:
+      target: airdc.common.devices.cameras.v4l2.V4L2Camera
+      camera_index: 0          # ← change to your wrist camera index
+      width: 640
+      height: 352
+      fps: 30
+    env1_cam:
+      target: airdc.common.devices.cameras.v4l2.V4L2Camera
+      camera_index: 1          # ← change to your env camera index
+      width: 640
+      height: 352
+      fps: 30
+
+policy:
+  path: outputs/train/my_act/checkpoints/last/pretrained_model
+
+task: "open the door"
+fps: 30
+duration: 0                    # 0 = run until Ctrl-C

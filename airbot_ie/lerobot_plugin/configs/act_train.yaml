@@ -1,0 +1,57 @@
+# ACT (Action Chunking with Transformers) training config on MCAP dataset.
+#
+# ACT is a lightweight policy (no pretrained backbone), trained from scratch on
+# your own demonstrations. Much smaller than pi0.5/SmolVLA and faster to train.
+#
+# Run:
+#   pixi run -e act mcap-lerobot-train -c airbot_ie/lerobot_plugin/configs/act_train.yaml
+
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+# ============================================================================
+# Common training knobs
+# ============================================================================
+steps: 20000
+save_freq: 5000
+log_freq: 100
+batch_size: 8
+num_workers: 1
+output_dir: outputs/train/my_act
+seed: 1000
+
+wandb:
+  enable: true
+  project: airbot-act
+  mode: offline
+
+policy:
+  type: act
+  push_to_hub: false
+  chunk_size: 100          # ACT action horizon
+  n_action_steps: 100      # steps to execute per chunk
+
+dataset:
+  root: data
+  repo_id: mcap
+  streaming: true
+
+mcap:
+  # observation.state = arm eef pose (position[3] + orientation[4]) + gripper (1) -> (8,)
+  states:
+    - arm/pose/position
+    - arm/pose/orientation
+    - eef/joint_state/position
+  # Wrist cam + env cam -> each (3, H, W)
+  images:
+    - eef_wrist_cam/color/image_raw
+    - env1_cam/color/image_raw
+  # action = target eef pose (position[3] + orientation[4]) + gripper (1) -> (8,)
+  actions:
+    - action/arm/pose/position
+    - action/arm/pose/orientation
+    - action/eef/joint_state/position
+  # ACT does not use language conditioning
+  task_source: none
+  task: "do the task"

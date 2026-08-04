@@ -1,0 +1,30 @@
+# ACT inference on AAO MuJoCo simulator via lerobot-rollout + aao_sim robot plugin.
+#
+# This uses the absolute_random_wrist checkpoint trained with observation_rotation=rot6d
+# (10-dim state = pos[3] + rot6d[6] + gripper[1]). The env must match by setting
+# observation_rotation: rot6d below.
+#
+# Run:
+#   pixi run -e infer-aao mcap-lerobot-infer -c airbot_ie/lerobot_plugin/configs/act_infer_aao.yaml
+
+preserve_keys: [sim_cameras]
+
+robot:
+  type: aao_sim
+  task_config: open_door
+  operator: arm
+  kinematic: false
+  substeps: 1
+  has_gripper: true
+  observation_rotation: rot6d      # → 10-dim state = pos(3) + rot6d(6) + grip(1)
+  sim_cameras:
+    wrist_cam: wrist_cam
+  camera_shape: [352, 640, 3]
+  mujoco_gl: egl
+
+policy:
+  path: models_open_door/absolute_random_wrist/pretrained_model
+
+task: "open the door"
+fps: 30
+duration: 10
