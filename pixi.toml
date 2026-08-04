@@ -182,8 +182,10 @@ jsonlines = ">=4.0.0,<5.0.0"
 #     tensorboard/local-csv logging). Off by default; enable per run with a
 #     `wandb:` block in the train YAML (wandb.enable + wandb.project + wandb.mode).
 #     See configs/smolvla_train.yaml / configs/pi05_train.yaml.
+#   - accelerate: required by lerobot-train's training runtime.
 # ---------------------------------------------------------------------------
 [feature.letrain.pypi-dependencies]
+accelerate = ">=1.0"
 wandb = ">=0.18"
 
 # ---------------------------------------------------------------------------
@@ -285,7 +287,7 @@ cmd = """python -c "import torch, cv2, hydra, datasets, av, transformers, num2wo
 [feature.act.tasks.act-check]
 description = "Offline self-check: import the ACT training stack and report versions"
 env = { HF_HUB_OFFLINE = "1", TRANSFORMERS_OFFLINE = "1" }
-cmd = """python -c "import torch, cv2, hydra, datasets, av; from lerobot.policies.act.modeling_act import ACTPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('ACT SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__)" """
+cmd = """python -c "import torch, cv2, hydra, datasets, av, accelerate; from lerobot.policies.act.modeling_act import ACTPolicy; from mcap_data_loader.datasets.mcap_lerobot import McapLeRobotDataset; print('ACT SELF-CHECK OK | cuda', torch.cuda.is_available(), '| torch', torch.__version__, '| accelerate', accelerate.__version__)" """
 
 # ---------------------------------------------------------------------------
 # collect feature: the data-collection environment. This is the pixi equivalent
@@ -396,6 +398,7 @@ ros = ["ros", "aao-core"]
 # `airbotpy` provides the airbot_py SDK; `airbot` adds the lerobot plugin on top.
 infer-airbot = ["mlbase", "ledata", "airbotpy", "airbot"]
 infer-aao = ["mlbase", "ledata", "aao-core", "aao"]
+smolvla-aao = ["mlbase", "ledata", "aao-core", "aao", "smolvla"]
 pi05 = ["mlbase", "ledata", "letrain", "pi05"]
 pi05-infer = ["mlbase", "ledata", "airbotpy", "airbot", "pi05", "leviz"]
 smolvla = ["mlbase", "ledata", "letrain", "smolvla"]
